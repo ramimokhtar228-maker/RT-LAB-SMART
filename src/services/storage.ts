@@ -45,11 +45,36 @@ const STORAGE_KEYS = {
 // Cross-tab broadcast channel
 const broadcast = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rt_lab_sync_channel') : null;
 
+// In-memory fallback if localStorage is blocked by iframe security policies
+const memoryStore: Record<string, string> = {};
+
+function safeGet(key: string): string | null {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem(key);
+    }
+  } catch {
+    // iframe sandbox or privacy settings blocked localStorage
+  }
+  return memoryStore[key] ?? null;
+}
+
+function safeSet(key: string, value: string): void {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
+    }
+  } catch {
+    // blocked or quota exceeded
+  }
+  memoryStore[key] = value;
+}
+
 // Unique device fingerprint
-let currentDeviceId = localStorage.getItem(STORAGE_KEYS.DEVICE_ID);
+let currentDeviceId = safeGet(STORAGE_KEYS.DEVICE_ID);
 if (!currentDeviceId) {
   currentDeviceId = 'dev-' + Math.random().toString(36).substring(2, 9);
-  localStorage.setItem(STORAGE_KEYS.DEVICE_ID, currentDeviceId);
+  safeSet(STORAGE_KEYS.DEVICE_ID, currentDeviceId);
 }
 
 // Change event listeners for React components
@@ -62,7 +87,7 @@ function notifyListeners() {
 
 function getItem<T>(key: string, defaultValue: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = safeGet(key);
     if (!raw) return defaultValue;
     return JSON.parse(raw) as T;
   } catch (e) {
@@ -73,7 +98,7 @@ function getItem<T>(key: string, defaultValue: T): T {
 
 function setItem<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    safeSet(key, JSON.stringify(value));
   } catch (e) {
     console.error('Failed writing key', key, e);
   }
@@ -92,7 +117,7 @@ export const StorageService = {
   init() {
     // Initialize defaults if not present or expand test catalog
     const existingTests = getItem<TestCatalogItem[]>(STORAGE_KEYS.TESTS, []);
-    if (!localStorage.getItem(STORAGE_KEYS.TESTS) || existingTests.length < 35) {
+    if (!safeGet(STORAGE_KEYS.TESTS) || existingTests.length < 35) {
       // Merge initial tests so existing custom tests are preserved while new tests are added
       const existingIds = new Set(existingTests.map(t => t.id));
       const mergedTests = [...existingTests];
@@ -103,37 +128,37 @@ export const StorageService = {
       }
       setItem(STORAGE_KEYS.TESTS, mergedTests.length > 0 ? mergedTests : INITIAL_TESTS);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.PACKAGES)) {
+    if (!safeGet(STORAGE_KEYS.PACKAGES)) {
       setItem(STORAGE_KEYS.PACKAGES, INITIAL_PACKAGES);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.PATIENTS)) {
+    if (!safeGet(STORAGE_KEYS.PATIENTS)) {
       setItem(STORAGE_KEYS.PATIENTS, INITIAL_PATIENTS);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.ORDERS)) {
+    if (!safeGet(STORAGE_KEYS.ORDERS)) {
       setItem(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.BOOKINGS)) {
+    if (!safeGet(STORAGE_KEYS.BOOKINGS)) {
       setItem(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.REAGENTS)) {
+    if (!safeGet(STORAGE_KEYS.REAGENTS)) {
       setItem(STORAGE_KEYS.REAGENTS, INITIAL_REAGENTS);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.EMPLOYEES)) {
+    if (!safeGet(STORAGE_KEYS.EMPLOYEES)) {
       setItem(STORAGE_KEYS.EMPLOYEES, INITIAL_EMPLOYEES);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.EXPENSES)) {
+    if (!safeGet(STORAGE_KEYS.EXPENSES)) {
       setItem(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.DEVICES)) {
+    if (!safeGet(STORAGE_KEYS.DEVICES)) {
       setItem(STORAGE_KEYS.DEVICES, INITIAL_DEVICES);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
+    if (!safeGet(STORAGE_KEYS.AUDIT_LOGS)) {
       setItem(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
     }
-    if (!localStorage.getItem(STORAGE_KEYS.CEO_PIN)) {
+    if (!safeGet(STORAGE_KEYS.CEO_PIN)) {
       setItem(STORAGE_KEYS.CEO_PIN, '7777');
     }
-    if (!localStorage.getItem(STORAGE_KEYS.CEO_PERCENTAGE)) {
+    if (!safeGet(STORAGE_KEYS.CEO_PERCENTAGE)) {
       setItem(STORAGE_KEYS.CEO_PERCENTAGE, 40);
     }
 

@@ -1,4 +1,5 @@
 import ramyMokhtarLogoUrl from '@/src/assets/images/ramy_mokhtar_logo_1790810479418.jpg';
+import teamPhotoUrl from '@/src/assets/images/rt_lab_logo_1790808785280.jpg';
 import receptionPhotoUrl from '@/src/assets/images/rt_lab_reception_1790810491272.jpg';
 
 export interface LabBranch {
@@ -41,6 +42,7 @@ export interface LabConfiguration {
   ceoSharePercentage: number;
   labSharePercentage: number;
   logoUrl: string;
+  teamPhotoUrl: string;
   receptionPhotoUrl: string;
   primaryColor: string; // Deep crimson red
   secondaryColor: string; // Deep royal blue
@@ -100,6 +102,7 @@ export const RT_LAB_INFO: LabConfiguration = {
   ceoSharePercentage: 40,
   labSharePercentage: 60,
   logoUrl: ramyMokhtarLogoUrl,
+  teamPhotoUrl: teamPhotoUrl,
   receptionPhotoUrl: receptionPhotoUrl,
   primaryColor: '#881337', // Deep crimson dark red
   secondaryColor: '#1e3a8a', // Dark royal blue

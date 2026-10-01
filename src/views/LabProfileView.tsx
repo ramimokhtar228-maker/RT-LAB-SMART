@@ -117,6 +117,66 @@ export const LabProfileView: React.FC = () => {
         </div>
       </div>
 
+      {/* Visual Identity Gallery */}
+      <div className="space-y-3">
+        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+          <Building className="w-4 h-4 text-rose-800" />
+          <span>الهوية البصرية وتجهيزات معامل رامي مختار RT LAB</span>
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Logo Showcase */}
+          <div className="bg-slate-950 text-white rounded-xl p-4 border border-slate-800 shadow-sm flex flex-col items-center justify-between text-center group">
+            <div className="p-3 bg-black/60 rounded-xl border border-red-900/40 w-full flex items-center justify-center">
+              <img 
+                src={RT_LAB_INFO.logoUrl} 
+                alt="شعار معامل رامي مختار RT LABS" 
+                className="w-36 h-36 object-contain rounded-lg shadow-lg group-hover:scale-105 transition-transform"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="pt-3">
+              <h3 className="font-bold text-white text-sm">الشعار المعتمد - RT LABS</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">قطرة الدم الياقوتية والدوائر الجزيئية المتطورة</p>
+            </div>
+          </div>
+
+          {/* Reception Photo Showcase */}
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div className="rounded-lg overflow-hidden border border-slate-100 bg-slate-100 aspect-4/3 flex items-center justify-center">
+              <img 
+                src={RT_LAB_INFO.receptionPhotoUrl} 
+                alt="استقبال معامل رامي مختار RT LAB" 
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="pt-3">
+              <h3 className="font-bold text-slate-900 text-sm">صالة الاستقبال والانتظار</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">مقر بهتيم الرئيسي - كاونتر RT LAB وشعار معامل رامي مختار</p>
+            </div>
+          </div>
+
+          {/* Medical Team Photo Showcase */}
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div className="rounded-lg overflow-hidden border border-slate-100 bg-slate-100 aspect-4/3 flex items-center justify-center">
+              <img 
+                src={RT_LAB_INFO.teamPhotoUrl} 
+                alt="فريق أطباء واستشاريي معامل رامي مختار" 
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="pt-3">
+              <h3 className="font-bold text-slate-900 text-sm">الفريق الطبي والاستشاري</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">نخبة من أطباء وأخصائيي التحاليل الطبية والباثولوجيا الإكلينيكية</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       {/* Branches Section */}
       <div className="space-y-3">
         <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">

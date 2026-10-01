@@ -55,55 +55,70 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6">
       
       {/* Top Banner / Hero with RT LAB branding & today's brief */}
-      <div className="bg-gradient-to-l from-blue-900 via-blue-800 to-indigo-950 text-white rounded-2xl p-6 shadow-sm border border-blue-800/40 relative overflow-hidden">
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 opacity-10 pointer-events-none hidden md:block">
-          <img 
-            src={RT_LAB_INFO.logoUrl} 
-            alt="RT Watermark" 
-            className="w-48 h-48 rounded-full object-cover filter grayscale contrast-200"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-xs text-xs text-blue-100 font-medium mb-3">
-            <span>{RT_LAB_INFO.nameArabic}</span>
-            <span aria-hidden="true">·</span>
-            <span>غرفة العمليات المركزية</span>
-          </div>
+      <div className="bg-gradient-to-l from-rose-950 via-slate-900 to-slate-950 text-white rounded-2xl p-6 sm:p-7 shadow-sm border border-rose-900/40 relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
           
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-white mb-2">
-            لوحة تحكم معامل RT - إدارة المختبر LIS
-          </h1>
-          <p className="text-sm text-blue-100/90 leading-relaxed">
-            متابعة شاملة لسير العمل المخبري من لحظة استقبال وتسجيل المريض، سحب العينات، المعالجة الآلية على أجهزة التحاليل، حتى الاعتماد الطبي النهائي وإصدار التقارير المعتمدة.
-          </p>
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-white/10 text-xs text-rose-200 font-semibold mb-3 border border-rose-800/50">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>{RT_LAB_INFO.nameArabic}</span>
+              <span aria-hidden="true">·</span>
+              <span>غرفة العمليات المركزية</span>
+            </div>
+            
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-white mb-2">
+              لوحة تحكم معامل RT - إدارة المختبر الطبي الذكي LIS
+            </h1>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              متابعة شاملة لسير العمل المخبري من لحظة استقبال وتسجيل المريض، سحب العينات، المعالجة الآلية على أجهزة التحاليل، حتى الاعتماد الطبي النهائي وإصدار التقارير المعتمدة.
+            </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button
-              onClick={onOpenNewOrder}
-              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>إنشاء طلب فحص جديد (New Order)</span>
-            </button>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                onClick={onOpenNewOrder}
+                className="flex items-center gap-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>إنشاء طلب فحص جديد (New Order)</span>
+              </button>
 
-            <button
-              onClick={() => onNavigate('worklist')}
-              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold text-xs px-4 py-2.5 rounded-lg backdrop-blur-xs transition-colors cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-sky-300" />
-              <span>فتح قائمة العمل (Worklist)</span>
-            </button>
+              <button
+                onClick={() => onNavigate('worklist')}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs px-4 py-2.5 rounded-lg border border-white/15 transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-sky-400" />
+                <span>قائمة العمل (Worklist)</span>
+              </button>
 
-            <button
-              onClick={() => onNavigate('bookings')}
-              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-semibold text-xs px-4 py-2.5 rounded-lg backdrop-blur-xs transition-colors cursor-pointer"
-            >
-              <CalendarCheck className="w-4 h-4 text-amber-300" />
-              <span>حجوزات الزيارات المنزلية ({pendingBookingsCount})</span>
-            </button>
+              <button
+                onClick={() => onNavigate('bookings')}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs px-4 py-2.5 rounded-lg border border-white/15 transition-colors cursor-pointer"
+              >
+                <CalendarCheck className="w-4 h-4 text-amber-400" />
+                <span>حجوزات الزيارات المنزلية ({pendingBookingsCount})</span>
+              </button>
+            </div>
           </div>
+
+          {/* Brand Logo Presentation Box */}
+          <div className="shrink-0 flex items-center gap-4 bg-black/40 border border-rose-900/50 p-4 rounded-xl shadow-lg backdrop-blur-xs">
+            <img 
+              src={RT_LAB_INFO.logoUrl} 
+              alt="معامل رامي مختار RT LAB" 
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-contain shadow-md border border-rose-900/40 p-1 bg-black/80"
+              referrerPolicy="no-referrer"
+            />
+            <div className="text-right">
+              <div className="text-sm font-extrabold text-white">معامل رامي مختار</div>
+              <div className="text-xs font-mono font-bold text-rose-400 tracking-wider">RT LAB LABORATORIES</div>
+              <div className="text-[11px] text-slate-400 mt-1">فرع بهتيم المركزي وفرع الشارع الجديد</div>
+              <div className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>النظام جاهز ومفعل للعمل اللحظي</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 

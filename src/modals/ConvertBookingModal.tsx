@@ -39,9 +39,9 @@ export const ConvertBookingModal: React.FC<ConvertBookingModalProps> = ({
         id: 'pat-' + Date.now().toString().slice(-4),
         name: booking.patientName,
         phone: booking.phone,
-        age: booking.age,
+        age: booking.age ?? 30,
         ageUnit: 'Years',
-        gender: booking.gender,
+        gender: (booking.gender as 'Male' | 'Female') || 'Male',
         address: booking.address,
         registeredAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
       };
@@ -71,6 +71,7 @@ export const ConvertBookingModal: React.FC<ConvertBookingModalProps> = ({
     const now = new Date();
     const createdStr = now.toISOString().replace('T', ' ').substring(0, 16);
 
+    const price = booking.estimatedPrice ?? 0;
     const newOrder: Order = {
       id: 'ord-' + Date.now(),
       orderNumber: orderNum,
@@ -90,11 +91,11 @@ export const ConvertBookingModal: React.FC<ConvertBookingModalProps> = ({
       specimenStatus: 'Waiting Collection',
       orderStatus: 'Pending',
       reportStatus: 'In Progress',
-      totalAmount: booking.estimatedPrice,
+      totalAmount: price,
       discount: 0,
-      netAmount: booking.estimatedPrice,
+      netAmount: price,
       paidAmount: 0,
-      remainingAmount: booking.estimatedPrice,
+      remainingAmount: price,
       paymentMethod: 'Cash',
       barcode: barcodeStr
     };
