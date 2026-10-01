@@ -413,7 +413,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                     onChange={e => setBranch(e.target.value)}
                     className="w-full p-2 bg-white border border-slate-200 rounded-lg cursor-pointer"
                   >
-                    {RT_LAB_INFO.branches.map(b => (
+                    {StorageService.getBranches().map(b => (
                       <option key={b.id} value={b.arabicName}>
                         {b.arabicName}
                       </option>

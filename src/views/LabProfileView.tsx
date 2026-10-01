@@ -1,5 +1,6 @@
-import React from 'react';
-import { RT_LAB_INFO } from '../data/labInfo';
+import React, { useState, useEffect } from 'react';
+import { RT_LAB_INFO, LabBranch } from '../data/labInfo';
+import { StorageService } from '../services/storage';
 import { 
   Building, 
   Phone, 
@@ -13,10 +14,79 @@ import {
   PhoneCall, 
   CheckCircle2, 
   Sparkles,
-  QrCode
+  QrCode,
+  Plus,
+  Trash2,
+  X,
+  PlusCircle
 } from 'lucide-react';
 
 export const LabProfileView: React.FC = () => {
+  const [branches, setBranches] = useState<LabBranch[]>(StorageService.getBranches());
+  const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
+  const [newBranch, setNewBranch] = useState<Partial<LabBranch>>({
+    arabicName: '',
+    name: '',
+    address: '',
+    phone: '',
+    mobile: '',
+    manager: '',
+    workingHours: 'من 9:00 صباحاً حتى 11:00 مساءً',
+    isMainBranch: false
+  });
+
+  useEffect(() => {
+    const unsub = StorageService.subscribe(() => {
+      setBranches(StorageService.getBranches());
+    });
+    return unsub;
+  }, []);
+
+  const handleAddBranch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBranch.arabicName || !newBranch.address) {
+      alert('يرجى كتابة اسم الفرع بالعربي والعنوان بالتفصيل.');
+      return;
+    }
+
+    const branch: LabBranch = {
+      id: 'branch-' + Date.now(),
+      name: newBranch.name || newBranch.arabicName || 'New Branch',
+      arabicName: newBranch.arabicName,
+      address: newBranch.address,
+      phone: newBranch.phone || RT_LAB_INFO.hotline,
+      mobile: newBranch.mobile || newBranch.phone || RT_LAB_INFO.hotline,
+      manager: newBranch.manager || 'طبيب استشاري باثولوجيا',
+      workingHours: newBranch.workingHours || 'من 9:00 صباحاً حتى 11:00 مساءً',
+      isMainBranch: !!newBranch.isMainBranch
+    };
+
+    const updated = StorageService.saveBranch(branch);
+    setBranches([...updated]);
+    setIsAddBranchModalOpen(false);
+    setNewBranch({
+      arabicName: '',
+      name: '',
+      address: '',
+      phone: '',
+      mobile: '',
+      manager: '',
+      workingHours: 'من 9:00 صباحاً حتى 11:00 مساءً',
+      isMainBranch: false
+    });
+  };
+
+  const handleDeleteBranch = (branch: LabBranch) => {
+    if (branches.length <= 1) {
+      alert('لا يمكن حذف الفرع الوحيد المتبقي للمعمل.');
+      return;
+    }
+
+    if (confirm(`هل أنت متأكد من الحذف النهائي للفرع (${branch.arabicName})؟\nسيتم حذف الفرع من جميع الأجهزة فوراً.`)) {
+      const updated = StorageService.deleteBranch(branch.id);
+      setBranches([...updated]);
+    }
+  };
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       
@@ -178,24 +248,47 @@ export const LabProfileView: React.FC = () => {
       </div>
 
       {/* Branches Section */}
-      <div className="space-y-3">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <Building className="w-4 h-4 text-blue-600" />
-          <span>شبكة فروع معامل RT المعتمدة (Authorized Branches Network)</span>
-        </h2>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Building className="w-4 h-4 text-blue-600" />
+              <span>شبكة فروع معامل RT المعتمدة ({branches.length} فروع)</span>
+            </h2>
+            <p className="text-xs text-slate-500">إدارة الفروع، إضافة فرع جديد للمعمل أو حذف فرع</p>
+          </div>
+
+          <button
+            onClick={() => setIsAddBranchModalOpen(true)}
+            className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs px-3.5 py-2 rounded-lg shadow-2xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>إضافة فرع جديد (Add Branch)</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {RT_LAB_INFO.branches.map((branch) => (
-            <div key={branch.id} className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-2 text-xs">
+          {branches.map((branch) => (
+            <div key={branch.id} className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-2.5 text-xs hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 text-sm">
-                  {branch.arabicName}
-                </h3>
-                {branch.isMainBranch && (
-                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                    المركز الرئيسي
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    {branch.arabicName}
+                  </h3>
+                  {branch.isMainBranch && (
+                    <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                      المركز الرئيسي
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => handleDeleteBranch(branch)}
+                  title="حذف هذا الفرع"
+                  className="p-1.5 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
 
               <div className="text-slate-600 flex items-start gap-1.5 pt-1">
@@ -206,7 +299,7 @@ export const LabProfileView: React.FC = () => {
               <div className="flex flex-wrap items-center gap-4 text-slate-600 pt-1">
                 <div className="flex items-center gap-1 font-mono">
                   <Phone className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{branch.phone} / {branch.mobile}</span>
+                  <span>{branch.phone} {branch.mobile && branch.mobile !== branch.phone ? `/ ${branch.mobile}` : ''}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -214,8 +307,8 @@ export const LabProfileView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-100 flex items-center justify-between">
-                <span>مدير الفرع: {branch.manager}</span>
+              <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span>مدير الفرع: <strong className="text-slate-700">{branch.manager}</strong></span>
                 <span className="text-emerald-600 font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   <span>استقبال عينات نشط</span>
@@ -225,6 +318,142 @@ export const LabProfileView: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Add Branch Modal */}
+      {isAddBranchModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <form onSubmit={handleAddBranch} className="bg-white rounded-2xl max-w-lg w-full p-5 border border-slate-200 shadow-2xl space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Building className="w-5 h-5 text-blue-700" />
+                <h3 className="text-sm font-bold text-slate-900">
+                  إضافة فرع جديد لمعامل رامي مختار RT LAB
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsAddBranchModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">اسم الفرع بالعربي *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="مثال: فرع مدينة نصر - شارع عباس العقاد"
+                  value={newBranch.arabicName || ''}
+                  onChange={e => setNewBranch({ ...newBranch, arabicName: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:border-blue-600 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">اسم الفرع بالإنجليزي (اختياري)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Nasr City Branch"
+                  value={newBranch.name || ''}
+                  onChange={e => setNewBranch({ ...newBranch, name: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:border-blue-600 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">العنوان بالتفصيل *</label>
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="العنوان، رقم المبنى، الدور، المعلم البارز..."
+                  value={newBranch.address || ''}
+                  onChange={e => setNewBranch({ ...newBranch, address: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:border-blue-600 text-xs resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">رقم الهاتف الأرضي / المباشر</label>
+                  <input
+                    type="text"
+                    placeholder="01100874444"
+                    value={newBranch.phone || ''}
+                    onChange={e => setNewBranch({ ...newBranch, phone: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">الموبايل / واتساب</label>
+                  <input
+                    type="text"
+                    placeholder="01100046841"
+                    value={newBranch.mobile || ''}
+                    onChange={e => setNewBranch({ ...newBranch, mobile: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">مدير الفرع</label>
+                  <input
+                    type="text"
+                    placeholder="د. أحمد مصطفى"
+                    value={newBranch.manager || ''}
+                    onChange={e => setNewBranch({ ...newBranch, manager: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">مواعيد العمل</label>
+                  <input
+                    type="text"
+                    placeholder="من 8:00 ص حتى 12:00 م"
+                    value={newBranch.workingHours || ''}
+                    onChange={e => setNewBranch({ ...newBranch, workingHours: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!newBranch.isMainBranch}
+                    onChange={e => setNewBranch({ ...newBranch, isMainBranch: e.target.checked })}
+                    className="rounded text-blue-700 focus:ring-blue-600"
+                  />
+                  <span className="text-slate-700 font-medium">تعيين كفرع رئيسي للمعمل (Main Headquarters)</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsAddBranchModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-bold shadow-xs cursor-pointer"
+              >
+                حفظ وإضافة الفرع
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
     </div>
   );

@@ -24,6 +24,7 @@ interface FinancialViewProps {
   onAddExpense: (expense: Expense) => void;
   onDeleteExpense?: (expId: string) => void;
   onEditExpense?: (expense: Expense) => void;
+  onDeleteOrder?: (orderId: string) => void;
 }
 
 export const FinancialView: React.FC<FinancialViewProps> = ({
@@ -32,7 +33,8 @@ export const FinancialView: React.FC<FinancialViewProps> = ({
   onUpdateOrder,
   onAddExpense,
   onDeleteExpense,
-  onEditExpense
+  onEditExpense,
+  onDeleteOrder
 }) => {
   const [activeTab, setActiveTab] = useState<'revenues' | 'expenses'>('revenues');
   const [searchQuery, setSearchQuery] = useState('');
@@ -305,20 +307,34 @@ export const FinancialView: React.FC<FinancialViewProps> = ({
                       </td>
 
                       <td className="py-3 px-4 text-center">
-                        {order.remainingAmount > 0 ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          {order.remainingAmount > 0 ? (
+                            <button
+                              onClick={() => {
+                                setPayingOrder(order);
+                                setAdditionalPayment(order.remainingAmount);
+                                setPayMethod(order.paymentMethod);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold cursor-pointer shadow-2xs"
+                            >
+                              تحصيل دفعة
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">مكتمل السداد</span>
+                          )}
+
                           <button
                             onClick={() => {
-                              setPayingOrder(order);
-                              setAdditionalPayment(order.remainingAmount);
-                              setPayMethod(order.paymentMethod);
+                              if (confirm(`هل أنت متأكد من الحذف النهائي للفاتورة والطلب رقم (${order.orderNumber}) للمريض ${order.patientName}؟`)) {
+                                if (onDeleteOrder) onDeleteOrder(order.id);
+                              }
                             }}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold cursor-pointer shadow-2xs"
+                            className="p-1 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                            title="حذف نهائي للفاتورة والطلب"
                           >
-                            تحصيل دفعة
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">مكتمل السداد</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))}

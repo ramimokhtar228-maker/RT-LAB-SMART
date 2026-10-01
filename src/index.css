@@ -14,6 +14,8 @@
     background: white !important;
     color: black !important;
     width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
@@ -28,36 +30,77 @@
     display: block !important;
   }
 
+  /* Unconstrain modal overlay so ALL pages print without clipping! */
+  .print-modal-overlay {
+    position: static !important;
+    overflow: visible !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .print-modal-content {
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: block !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
   .print-container {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    overflow: visible !important;
+    height: auto !important;
     box-shadow: none !important;
     border: none !important;
     background: white !important;
+    display: block !important;
   }
 
+  /* A4 Page Formatting: Exactly 1 page per profile */
   .profile-page {
-    box-shadow: none !important;
-    border: 1.5px solid #881337 !important; /* Deep crimson border */
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    margin-bottom: 0 !important;
-    min-height: 275mm !important;
-    height: auto !important;
-    box-sizing: border-box !important;
-    background: white !important;
-  }
-
-  .profile-page:not(:last-child) {
+    width: 100% !important;
+    min-height: 278mm !important;
+    max-height: 285mm !important;
+    height: 282mm !important;
     page-break-after: always !important;
     break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    padding: 6mm 8mm !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    border: 1.5px solid #881337 !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+  }
+
+  .profile-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm;
+    margin: 5mm 8mm;
   }
 }
 

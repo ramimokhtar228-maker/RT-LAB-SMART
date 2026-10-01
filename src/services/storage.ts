@@ -12,6 +12,7 @@ import {
   TubeInfo,
   ResultFlag
 } from '../types/lis';
+import { RT_LAB_INFO, LabBranch } from '../data/labInfo';
 import {
   TUBES_DATA,
   INITIAL_TESTS,
@@ -39,7 +40,8 @@ const STORAGE_KEYS = {
   AUDIT_LOGS: 'rt_ramy_audit_logs_v2',
   CEO_PIN: 'rt_ramy_ceo_pin_v2',
   CEO_PERCENTAGE: 'rt_ramy_ceo_share_pct_v2',
-  DEVICE_ID: 'rt_ramy_device_uuid_v2'
+  DEVICE_ID: 'rt_ramy_device_uuid_v2',
+  BRANCHES: 'rt_ramy_branches_v2'
 };
 
 // Cross-tab broadcast channel
@@ -161,6 +163,9 @@ export const StorageService = {
     if (!safeGet(STORAGE_KEYS.CEO_PERCENTAGE)) {
       setItem(STORAGE_KEYS.CEO_PERCENTAGE, 40);
     }
+    if (!safeGet(STORAGE_KEYS.BRANCHES)) {
+      setItem(STORAGE_KEYS.BRANCHES, RT_LAB_INFO.branches);
+    }
 
     // Try fetching latest central database from server on init
     this.syncFromServer();
@@ -231,6 +236,7 @@ export const StorageService = {
           if (d.expenses) setItem(STORAGE_KEYS.EXPENSES, d.expenses);
           if (d.devices) setItem(STORAGE_KEYS.DEVICES, d.devices);
           if (d.auditLogs) setItem(STORAGE_KEYS.AUDIT_LOGS, d.auditLogs);
+          if (d.branches) setItem(STORAGE_KEYS.BRANCHES, d.branches);
           notifyListeners();
         }
       }
@@ -259,7 +265,8 @@ export const StorageService = {
         employees: this.getEmployees(),
         expenses: this.getExpenses(),
         devices: this.getDevices(),
-        auditLogs: this.getAuditLogs()
+        auditLogs: this.getAuditLogs(),
+        branches: this.getBranches()
       };
 
       await fetch('/api/database', {
@@ -507,6 +514,31 @@ export const StorageService = {
     setItem(STORAGE_KEYS.DEVICES, list);
     this.addAuditLog('حذف جهاز تحليل', `معرف: ${devId}`, 'Settings');
     this.syncToServer(`حذف جهاز ${devId}`);
+    return list;
+  },
+
+  // Lab Branches (CRUD)
+  getBranches(): LabBranch[] {
+    return getItem(STORAGE_KEYS.BRANCHES, RT_LAB_INFO.branches);
+  },
+  saveBranch(branch: LabBranch) {
+    const list = this.getBranches();
+    const idx = list.findIndex(b => b.id === branch.id);
+    if (idx >= 0) {
+      list[idx] = branch;
+    } else {
+      list.push(branch);
+    }
+    setItem(STORAGE_KEYS.BRANCHES, list);
+    this.addAuditLog('تحديث بيانات فرع', `فرع: ${branch.arabicName}`, 'Settings');
+    this.syncToServer(`تحديث الفرع ${branch.arabicName}`);
+    return list;
+  },
+  deleteBranch(branchId: string) {
+    const list = this.getBranches().filter(b => b.id !== branchId);
+    setItem(STORAGE_KEYS.BRANCHES, list);
+    this.addAuditLog('حذف فرع معمل', `معرف الفرع: ${branchId}`, 'Settings');
+    this.syncToServer(`حذف الفرع ${branchId}`);
     return list;
   },
 

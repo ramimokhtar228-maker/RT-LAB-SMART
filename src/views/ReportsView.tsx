@@ -11,17 +11,20 @@ import {
   Eye, 
   Share2,
   Calendar,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
 
 interface ReportsViewProps {
   orders: Order[];
   onOpenPrintReport: (order: Order) => void;
+  onDeleteOrder?: (orderId: string) => void;
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
   orders,
-  onOpenPrintReport
+  onOpenPrintReport,
+  onDeleteOrder
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | ReportStatus>('All');
@@ -187,13 +190,28 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                     </td>
 
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => onOpenPrintReport(order)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        <span>معاينة وطباعة التقرير</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => onOpenPrintReport(order)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                          title="معاينة وطباعة التقرير"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>طباعة</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من الحذف النهائي لتقرير الفحص رقم (${order.orderNumber}) للمريض ${order.patientName}؟`)) {
+                              if (onDeleteOrder) onDeleteOrder(order.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                          title="حذف نهائي للتقرير"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

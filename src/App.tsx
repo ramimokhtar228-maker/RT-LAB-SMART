@@ -373,6 +373,7 @@ export default function App() {
             <ReportsView
               orders={orders}
               onOpenPrintReport={setPrintReportOrder}
+              onDeleteOrder={handleDeleteOrder}
             />
           )}
 
@@ -412,6 +413,7 @@ export default function App() {
               onAddExpense={handleAddExpense}
               onEditExpense={handleEditExpense}
               onDeleteExpense={handleDeleteExpense}
+              onDeleteOrder={handleDeleteOrder}
             />
           )}
 
