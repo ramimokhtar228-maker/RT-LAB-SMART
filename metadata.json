@@ -1,0 +1,7 @@
+{
+  "name": "معامل RT - RT LAB LIS",
+  "description": "نظام إدارة المختبرات الطبية المتكامل لمعامل RT - RT LAB LIS: إدارة المرضى، الطلبات، سحب العينات، النتائج، التقارير الذكية، الحسابات، المخزون، والأجهزة المخبرية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
