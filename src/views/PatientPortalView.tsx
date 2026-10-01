@@ -21,6 +21,7 @@ import {
 interface PatientPortalViewProps {
   orders: Order[];
   packages: TestPackage[];
+  tests: TestCatalogItem[];
   onAddBooking: (booking: Booking) => void;
   onOpenPrintReport: (order: Order) => void;
 }
@@ -28,6 +29,7 @@ interface PatientPortalViewProps {
 export const PatientPortalView: React.FC<PatientPortalViewProps> = ({
   orders,
   packages,
+  tests,
   onAddBooking,
   onOpenPrintReport
 }) => {
@@ -409,6 +411,34 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({
                   {selectedPackage.description}
                 </div>
               )}
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">التحاليل الفردية (اختر من القائمة)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-slate-50 rounded-lg border border-slate-200">
+                {tests.map(test => (
+                  <label key={test.id} className="flex items-center gap-2 p-1.5 hover:bg-slate-100 rounded cursor-pointer text-xs">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedTestIds.includes(test.id)} 
+                      onChange={() => handleToggleTest(test.id)}
+                      className="rounded text-blue-600"
+                    />
+                    <span className="truncate">{test.arabicName}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">تحاليل أخرى غير موجودة بالقائمة</label>
+              <input
+                type="text"
+                value={customTests}
+                onChange={e => setCustomTests(e.target.value)}
+                placeholder="اكتب أسماء التحاليل هنا..."
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden text-xs"
+              />
             </div>
 
             <div>

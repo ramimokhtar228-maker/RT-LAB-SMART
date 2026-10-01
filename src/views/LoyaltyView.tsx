@@ -38,6 +38,7 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
   const [isPointsModalOpen, setIsPointsModalOpen] = useState(false);
   const [pointsAdjustment, setPointsAdjustment] = useState<number>(50);
   const [adjustmentReason, setAdjustmentReason] = useState<string>('مكافأة زيارة متكررة');
+  const [pointPrice, setPointPrice] = useState<number>(Number(localStorage.getItem('rt_ramy_loyalty_pt_value')) || 0.5);
 
   const selectedPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
 
@@ -50,7 +51,7 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
 
   // Stats
   const totalPointsInCirculation = patients.reduce((acc, p) => acc + (p.loyaltyPoints || 0), 0);
-  const totalValueInEGP = totalPointsInCirculation * 0.5;
+  const totalValueInEGP = totalPointsInCirculation * pointPrice;
   const vipCount = patients.filter(p => p.loyaltyTier === 'VIP' || p.loyaltyTier === 'Platinum').length;
 
   const handleAdjustPoints = (type: 'add' | 'deduct') => {

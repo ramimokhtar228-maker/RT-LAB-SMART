@@ -464,6 +464,7 @@ export default function App() {
             <PatientPortalView
               orders={orders}
               packages={packages}
+              tests={tests}
               onAddBooking={(b) => {
                 handleSaveBooking(b);
                 alert(`تم تسجيل الحجز بنجاح! كود الحجز هو: ${b.bookingCode}`);

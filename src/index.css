@@ -74,9 +74,9 @@
   /* A4 Page Formatting: Exactly 1 page per profile */
   .profile-page {
     width: 100% !important;
-    min-height: 278mm !important;
-    max-height: 285mm !important;
-    height: 282mm !important;
+    min-height: 270mm !important;
+    max-height: 277mm !important;
+    height: 275mm !important;
     page-break-after: always !important;
     break-after: page !important;
     page-break-inside: avoid !important;

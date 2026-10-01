@@ -145,7 +145,7 @@ export const SmartReportsView: React.FC<SmartReportsViewProps> = ({
             </button>
 
             <button
-              onClick={() => onOpenPrintReport(selectedOrder)}
+              onClick={() => { const og = orders.find(o=>o.id === selectedOrder.id); if (og) onOpenPrintReport(resolveLatest(og) as Order); }}
               className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
             >
               <Printer className="w-4 h-4" />

@@ -72,7 +72,7 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
   // Keep state synced when selected order changes & auto expand composite profiles
   useEffect(() => {
     if (selectedOrder) {
-      let rawResults = selectedOrder.results || [];
+      let rawResults = (selectedOrder.results || []).map(resolveLatestTestInfo);
       const needsExpand = rawResults.some(r => {
         const codeUpper = r.testCode?.toUpperCase().trim() || '';
         return codeUpper === 'CBC' || codeUpper === 'URINE_ROUTINE' || codeUpper === 'STOOL_ROUTINE' || codeUpper === 'SEMEN_ANALYSIS';
@@ -737,7 +737,7 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
                           }`}>
                             
                             {/* Test Name & Code */}
-                            <td className="py-2.5 px-3">
+                            <td className="py-2.5 px-3 border-l border-slate-100">
                               <div className="font-bold text-slate-900">{result.testName}</div>
                               <div className="flex items-center gap-1 font-mono text-[10px] text-slate-400">
                                 <span>{result.testCode}</span>
@@ -750,11 +750,12 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
                             </td>
 
                             {/* Result Input + Quick Select Chips */}
-                            <td className="py-2.5 px-3">
+                            <td className="py-2.5 px-3 border-l border-slate-100 w-1/3">
                               <div className="space-y-1">
                                 <input
                                   type="text"
                                   value={result.resultValue}
+                                  style={{ fontSize: '14px', padding: '10px 8px' }}
                                   onChange={(e) => handleResultChange(result.testId, e.target.value)}
                                   placeholder="اكتب النتيجة أو اختر..."
                                   className={`w-full px-2.5 py-1 text-xs font-mono font-bold rounded border transition-colors ${

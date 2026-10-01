@@ -125,8 +125,7 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleOpenAdd}
+          <button type="button" onClick={handleOpenAdd}
             className="flex items-center gap-1.5 bg-rose-900 hover:bg-rose-950 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-2xs transition-colors cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
@@ -134,8 +133,7 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
           </button>
 
           {selectedPatient && (
-            <button
-              onClick={() => onOpenNewOrderForPatient(selectedPatient)}
+            <button type="button" onClick={() => onOpenNewOrderForPatient(selectedPatient)}
               className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs px-4 py-2.5 rounded-lg shadow-2xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -160,8 +158,7 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                 className="w-full pl-2 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-md focus:outline-hidden"
               />
             </div>
-            <button
-              onClick={handleOpenAdd}
+            <button type="button" onClick={handleOpenAdd}
               title="إضافة مريض جديد"
               className="p-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-md transition-colors cursor-pointer"
             >
@@ -426,7 +423,7 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
               <h3 className="font-bold text-base text-slate-900">
                 {editingPatient.name ? `تعديل ملف المريض: ${editingPatient.name}` : 'إضافة مريض جديد إلى قاعدة البيانات'}
               </h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
