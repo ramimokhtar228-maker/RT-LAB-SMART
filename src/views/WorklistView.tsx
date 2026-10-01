@@ -72,7 +72,21 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
   // Keep state synced when selected order changes & auto expand composite profiles
   useEffect(() => {
     if (selectedOrder) {
-      let rawResults = (selectedOrder.results || []).map(resolveLatestTestInfo);
+      const catalogTests = StorageService.getTests();
+      let rawResults: OrderTestResult[] = (selectedOrder.results || []).map(r => {
+        const cat = catalogTests.find(c => c.id === r.testId || c.code.toUpperCase() === r.testCode.toUpperCase());
+        if (cat) {
+          const ref = cat.referenceRanges.find(rg => rg.gender === selectedOrder.patientGender || rg.gender === 'All') || cat.referenceRanges[0];
+          return {
+            ...r,
+            testName: cat.arabicName || r.testName,
+            unit: cat.unit || r.unit,
+            referenceRangeText: ref?.textualRange || r.referenceRangeText
+          };
+        }
+        return r;
+      });
+
       const needsExpand = rawResults.some(r => {
         const codeUpper = r.testCode?.toUpperCase().trim() || '';
         return codeUpper === 'CBC' || codeUpper === 'URINE_ROUTINE' || codeUpper === 'STOOL_ROUTINE' || codeUpper === 'SEMEN_ANALYSIS';

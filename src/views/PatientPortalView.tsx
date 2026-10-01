@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Booking, Order, TestPackage } from '../types/lis';
+import { Booking, Order, TestPackage, TestCatalogItem } from '../types/lis';
 import { RT_LAB_INFO } from '../data/labInfo';
 import { 
   Globe2, 
@@ -50,8 +50,16 @@ export const PatientPortalView: React.FC<PatientPortalViewProps> = ({
   const [timeSlot, setTimeSlot] = useState('09:00 ص - 10:30 ص');
   const [bookingType, setBookingType] = useState<'Home Visit' | 'Lab Branch Visit'>('Home Visit');
   const [selectedPackageId, setSelectedPackageId] = useState(packages[0]?.id || '');
+  const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
+  const [customTests, setCustomTests] = useState('');
   const [notes, setNotes] = useState('');
   const [bookingSuccessCode, setBookingSuccessCode] = useState<string | null>(null);
+
+  const handleToggleTest = (testId: string) => {
+    setSelectedTestIds(prev => 
+      prev.includes(testId) ? prev.filter(id => id !== testId) : [...prev, testId]
+    );
+  };
 
   const selectedPackage = packages.find(p => p.id === selectedPackageId) || packages[0];
 
