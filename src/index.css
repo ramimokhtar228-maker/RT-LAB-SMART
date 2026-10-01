@@ -22,6 +22,11 @@
     print-color-adjust: exact !important;
   }
 
+  /* CRITICAL: Completely hide all main navigation, sidebar, header, and underlying views during print! */
+  aside,
+  header,
+  main,
+  nav,
   .no-print {
     display: none !important;
   }
@@ -30,7 +35,7 @@
     display: block !important;
   }
 
-  /* Unconstrain modal overlay so ALL pages print without clipping! */
+  /* Unconstrain modal overlay so ONLY report pages print cleanly */
   .print-modal-overlay {
     position: static !important;
     overflow: visible !important;
@@ -71,19 +76,14 @@
     display: block !important;
   }
 
-  /* A4 Page Formatting: Exactly 1 page per profile */
+  /* A4 Page Formatting: Exactly 1 page per profile without extra blank overflow */
   .profile-page {
     width: 100% !important;
-    min-height: 270mm !important;
-    max-height: 277mm !important;
-    height: 275mm !important;
-    page-break-after: always !important;
-    break-after: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+    min-height: auto !important;
+    max-height: 282mm !important;
     box-sizing: border-box !important;
     background: white !important;
-    padding: 6mm 8mm !important;
+    padding: 5mm 7mm !important;
     margin: 0 auto !important;
     display: flex !important;
     flex-direction: column !important;
@@ -91,6 +91,10 @@
     border: 1.5px solid #881337 !important;
     border-radius: 6px !important;
     overflow: hidden !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .profile-page:last-child {
@@ -100,7 +104,7 @@
 
   @page {
     size: A4 portrait;
-    margin: 5mm 8mm;
+    margin: 5mm 6mm;
   }
 }
 

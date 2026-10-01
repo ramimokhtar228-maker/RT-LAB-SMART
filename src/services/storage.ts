@@ -41,7 +41,9 @@ const STORAGE_KEYS = {
   CEO_PIN: 'rt_ramy_ceo_pin_v2',
   CEO_PERCENTAGE: 'rt_ramy_ceo_share_pct_v2',
   DEVICE_ID: 'rt_ramy_device_uuid_v2',
-  BRANCHES: 'rt_ramy_branches_v2'
+  BRANCHES: 'rt_ramy_branches_v2',
+  LOYALTY_SETTINGS: 'rt_ramy_loyalty_settings_v3',
+  SEEDED_FLAG: 'rt_ramy_v3_seeded_done'
 };
 
 // Cross-tab broadcast channel
@@ -117,79 +119,62 @@ export const StorageService = {
   },
 
   init() {
-    // Initialize defaults if not present or expand test catalog
-    const existingTests = getItem<TestCatalogItem[]>(STORAGE_KEYS.TESTS, []);
-    if (!safeGet(STORAGE_KEYS.TESTS) || existingTests.length < 35) {
-      // Merge initial tests so existing custom tests are preserved while new tests are added
-      const existingIds = new Set(existingTests.map(t => t.id));
-      const mergedTests = [...existingTests];
-      for (const t of INITIAL_TESTS) {
-        if (!existingIds.has(t.id)) {
-          mergedTests.push(t);
-        }
+    // Check if initial seeding has already been performed
+    const isSeeded = safeGet(STORAGE_KEYS.SEEDED_FLAG);
+
+    if (!isSeeded) {
+      // First-time one-off initialization only:
+      if (!safeGet(STORAGE_KEYS.TESTS)) {
+        setItem(STORAGE_KEYS.TESTS, INITIAL_TESTS);
       }
-      setItem(STORAGE_KEYS.TESTS, mergedTests.length > 0 ? mergedTests : INITIAL_TESTS);
-    }
-    if (!safeGet(STORAGE_KEYS.PACKAGES)) {
-      setItem(STORAGE_KEYS.PACKAGES, INITIAL_PACKAGES);
-    }
-    const existingPatients = getItem<Patient[]>(STORAGE_KEYS.PATIENTS, []);
-    if (!existingPatients || existingPatients.length === 0) {
-      setItem(STORAGE_KEYS.PATIENTS, INITIAL_PATIENTS);
-    } else {
-      const updatedPatients = existingPatients.map(p => {
-        if (!p.loyaltyCardNumber) {
-          const initMatch = INITIAL_PATIENTS.find(ip => ip.id === p.id);
-          return {
-            ...p,
-            loyaltyCardNumber: initMatch?.loyaltyCardNumber || `RT-${p.phone?.slice(-4) || '5555'}-GOLD`,
-            loyaltyTier: initMatch?.loyaltyTier || 'Gold',
-            loyaltyPoints: p.loyaltyPoints ?? (initMatch?.loyaltyPoints || 100)
-          };
-        }
-        return p;
-      });
-      setItem(STORAGE_KEYS.PATIENTS, updatedPatients);
-    }
-    const existingOrders = getItem<Order[]>(STORAGE_KEYS.ORDERS, []);
-    if (!existingOrders || existingOrders.length === 0) {
-      setItem(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
-    } else {
-      const existingIds = new Set(existingOrders.map(o => o.id));
-      const missingOrders = INITIAL_ORDERS.filter(o => !existingIds.has(o.id));
-      if (missingOrders.length > 0) {
-        setItem(STORAGE_KEYS.ORDERS, [...existingOrders, ...missingOrders]);
+      if (!safeGet(STORAGE_KEYS.PACKAGES)) {
+        setItem(STORAGE_KEYS.PACKAGES, INITIAL_PACKAGES);
       }
-    }
-    if (!safeGet(STORAGE_KEYS.BOOKINGS)) {
-      setItem(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
-    }
-    if (!safeGet(STORAGE_KEYS.REAGENTS)) {
-      setItem(STORAGE_KEYS.REAGENTS, INITIAL_REAGENTS);
-    }
-    if (!safeGet(STORAGE_KEYS.EMPLOYEES)) {
-      setItem(STORAGE_KEYS.EMPLOYEES, INITIAL_EMPLOYEES);
-    }
-    if (!safeGet(STORAGE_KEYS.EXPENSES)) {
-      setItem(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
-    }
-    if (!safeGet(STORAGE_KEYS.DEVICES)) {
-      setItem(STORAGE_KEYS.DEVICES, INITIAL_DEVICES);
-    }
-    if (!safeGet(STORAGE_KEYS.AUDIT_LOGS)) {
-      setItem(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
-    }
-    if (!safeGet(STORAGE_KEYS.CEO_PIN)) {
-      setItem(STORAGE_KEYS.CEO_PIN, '7777');
-    }
-    if (!safeGet(STORAGE_KEYS.CEO_PERCENTAGE)) {
-      setItem(STORAGE_KEYS.CEO_PERCENTAGE, 40);
-    }
-    if (!safeGet(STORAGE_KEYS.BRANCHES)) {
-      setItem(STORAGE_KEYS.BRANCHES, RT_LAB_INFO.branches);
+      if (!safeGet(STORAGE_KEYS.PATIENTS)) {
+        setItem(STORAGE_KEYS.PATIENTS, INITIAL_PATIENTS);
+      }
+      if (!safeGet(STORAGE_KEYS.ORDERS)) {
+        setItem(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
+      }
+      if (!safeGet(STORAGE_KEYS.BOOKINGS)) {
+        setItem(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+      }
+      if (!safeGet(STORAGE_KEYS.REAGENTS)) {
+        setItem(STORAGE_KEYS.REAGENTS, INITIAL_REAGENTS);
+      }
+      if (!safeGet(STORAGE_KEYS.EMPLOYEES)) {
+        setItem(STORAGE_KEYS.EMPLOYEES, INITIAL_EMPLOYEES);
+      }
+      if (!safeGet(STORAGE_KEYS.EXPENSES)) {
+        setItem(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
+      }
+      if (!safeGet(STORAGE_KEYS.DEVICES)) {
+        setItem(STORAGE_KEYS.DEVICES, INITIAL_DEVICES);
+      }
+      if (!safeGet(STORAGE_KEYS.AUDIT_LOGS)) {
+        setItem(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
+      }
+      if (!safeGet(STORAGE_KEYS.CEO_PIN)) {
+        setItem(STORAGE_KEYS.CEO_PIN, '7777');
+      }
+      if (!safeGet(STORAGE_KEYS.CEO_PERCENTAGE)) {
+        setItem(STORAGE_KEYS.CEO_PERCENTAGE, 40);
+      }
+      if (!safeGet(STORAGE_KEYS.BRANCHES)) {
+        setItem(STORAGE_KEYS.BRANCHES, RT_LAB_INFO.branches);
+      }
+      if (!safeGet(STORAGE_KEYS.LOYALTY_SETTINGS)) {
+        setItem(STORAGE_KEYS.LOYALTY_SETTINGS, {
+          pointValueEGP: 0.5,
+          pointsPerEGPSpent: 0.1, // 1 point per 10 EGP spent
+          welcomeBonusPoints: 50,
+          minRedeemPoints: 20
+        });
+      }
+      safeSet(STORAGE_KEYS.SEEDED_FLAG, 'true');
     }
 
-    // Try fetching latest central database from server on init
+    // Try fetching latest central database from server on init (if connected)
     this.syncFromServer();
 
     // Periodic synchronization every 4 seconds to guarantee multi-device sync
@@ -650,19 +635,38 @@ export const StorageService = {
     return 'Normal';
   },
 
-  // Reset to demo
+  // Loyalty Program Settings
+  getLoyaltySettings(): { pointValueEGP: number; pointsPerEGPSpent: number; welcomeBonusPoints: number; minRedeemPoints: number } {
+    return getItem(STORAGE_KEYS.LOYALTY_SETTINGS, {
+      pointValueEGP: 0.5,
+      pointsPerEGPSpent: 0.1,
+      welcomeBonusPoints: 50,
+      minRedeemPoints: 20
+    });
+  },
+  saveLoyaltySettings(settings: { pointValueEGP: number; pointsPerEGPSpent: number; welcomeBonusPoints: number; minRedeemPoints: number }) {
+    setItem(STORAGE_KEYS.LOYALTY_SETTINGS, settings);
+    notifyListeners();
+    this.addAuditLog('تحديث إعدادات كروت الولاء', `قيمة النقطة: ${settings.pointValueEGP} ج.م - معدل الكسب: ${settings.pointsPerEGPSpent}`, 'Settings');
+    return settings;
+  },
+
+  // Reset to demo / factory default
   resetToDemo() {
-    localStorage.removeItem(STORAGE_KEYS.TESTS);
-    localStorage.removeItem(STORAGE_KEYS.PACKAGES);
-    localStorage.removeItem(STORAGE_KEYS.PATIENTS);
-    localStorage.removeItem(STORAGE_KEYS.ORDERS);
-    localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
-    localStorage.removeItem(STORAGE_KEYS.REAGENTS);
-    localStorage.removeItem(STORAGE_KEYS.EMPLOYEES);
-    localStorage.removeItem(STORAGE_KEYS.EXPENSES);
-    localStorage.removeItem(STORAGE_KEYS.DEVICES);
-    localStorage.removeItem(STORAGE_KEYS.AUDIT_LOGS);
-    this.init();
+    safeSet(STORAGE_KEYS.SEEDED_FLAG, '');
+    setItem(STORAGE_KEYS.TESTS, INITIAL_TESTS);
+    setItem(STORAGE_KEYS.PACKAGES, INITIAL_PACKAGES);
+    setItem(STORAGE_KEYS.PATIENTS, INITIAL_PATIENTS);
+    setItem(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
+    setItem(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+    setItem(STORAGE_KEYS.REAGENTS, INITIAL_REAGENTS);
+    setItem(STORAGE_KEYS.EMPLOYEES, INITIAL_EMPLOYEES);
+    setItem(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
+    setItem(STORAGE_KEYS.DEVICES, INITIAL_DEVICES);
+    setItem(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
+    setItem(STORAGE_KEYS.BRANCHES, RT_LAB_INFO.branches);
+    safeSet(STORAGE_KEYS.SEEDED_FLAG, 'true');
+    notifyListeners();
     this.syncToServer('إعادة ضبط البيانات إلى الوضع المصنعي الافتراضي');
   },
 

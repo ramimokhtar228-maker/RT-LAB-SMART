@@ -35,12 +35,38 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string>(patients[0]?.id || '');
+  
+  // Lab Management Loyalty Settings
+  const [loyaltySettings, setLoyaltySettings] = useState(() => StorageService.getLoyaltySettings());
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [settingsSuccessMsg, setSettingsSuccessMsg] = useState<string | null>(null);
+
+  // Points Modal State
   const [isPointsModalOpen, setIsPointsModalOpen] = useState(false);
+  const [exactPointsValue, setExactPointsValue] = useState<number>(0);
+  const [editTierValue, setEditTierValue] = useState<'Silver' | 'Gold' | 'Platinum' | 'VIP'>('Gold');
+  const [editCardNumber, setEditCardNumber] = useState<string>('');
   const [pointsAdjustment, setPointsAdjustment] = useState<number>(50);
   const [adjustmentReason, setAdjustmentReason] = useState<string>('مكافأة زيارة متكررة');
-  const [pointPrice, setPointPrice] = useState<number>(Number(localStorage.getItem('rt_ramy_loyalty_pt_value')) || 0.5);
 
   const selectedPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
+
+  // Open modal and prepopulate
+  const handleOpenEditModal = () => {
+    if (!selectedPatient) return;
+    setExactPointsValue(selectedPatient.loyaltyPoints || 0);
+    setEditTierValue((selectedPatient.loyaltyTier as any) || 'Gold');
+    setEditCardNumber(selectedPatient.loyaltyCardNumber || `RT-${selectedPatient.phone.slice(-4) || '9999'}-GOLD`);
+    setIsPointsModalOpen(true);
+  };
+
+  // Save Loyalty Settings
+  const handleSaveSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    StorageService.saveLoyaltySettings(loyaltySettings);
+    setSettingsSuccessMsg('تم حفظ وتحديث تسعير وقواعد كروت الولاء على مستوى المعمل بنجاح!');
+    setTimeout(() => setSettingsSuccessMsg(null), 3500);
+  };
 
   // Filter patients with loyalty search
   const filteredPatients = patients.filter(p => 
@@ -51,8 +77,24 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
 
   // Stats
   const totalPointsInCirculation = patients.reduce((acc, p) => acc + (p.loyaltyPoints || 0), 0);
-  const totalValueInEGP = totalPointsInCirculation * pointPrice;
+  const totalValueInEGP = totalPointsInCirculation * (loyaltySettings.pointValueEGP || 0.5);
   const vipCount = patients.filter(p => p.loyaltyTier === 'VIP' || p.loyaltyTier === 'Platinum').length;
+
+  const handleSaveExactPoints = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPatient) return;
+
+    const updated: Patient = {
+      ...selectedPatient,
+      loyaltyPoints: Math.max(0, exactPointsValue),
+      loyaltyCardNumber: editCardNumber.trim() || selectedPatient.loyaltyCardNumber || `RT-${selectedPatient.phone.slice(-4) || '9999'}-GOLD`,
+      loyaltyTier: editTierValue
+    };
+
+    onSavePatient(updated);
+    setIsPointsModalOpen(false);
+    alert(`تم تحديث رصيد النقاط للمريض (${selectedPatient.name}) إلى ${exactPointsValue} نقطة بنجاح.`);
+  };
 
   const handleAdjustPoints = (type: 'add' | 'deduct') => {
     if (!selectedPatient) return;
@@ -105,7 +147,15 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => setShowSettingsPanel(!showSettingsPanel)}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-colors backdrop-blur-xs border border-white/30"
+            >
+              <Award className="w-4 h-4 text-amber-300" />
+              <span>{showSettingsPanel ? 'إخفاء إعدادات الأسعار' : 'إدارة أسعار وسياسات النقاط'}</span>
+            </button>
+
             <button
               onClick={handlePrintCard}
               className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-bold shadow-md cursor-pointer transition-colors"
@@ -120,6 +170,112 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
         <div className="absolute -left-12 -bottom-12 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute right-12 -top-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
+
+      {/* Lab Management: Loyalty Pricing & Rules Panel */}
+      {showSettingsPanel && (
+        <form onSubmit={handleSaveSettings} className="bg-white rounded-xl p-5 border-2 border-amber-300 shadow-md space-y-4 animate-fadeIn">
+          <div className="flex items-center justify-between pb-2 border-b border-amber-100">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Coins className="w-4 h-4 text-amber-600" />
+                <span>إدارة أسعار وسياسات منظومة كروت الولاء (Lab Loyalty Pricing & Policy)</span>
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                التحكم المالي والإداري في تسعير النقاط ومعدلات الخصم على مستوى كافة فروع معامل رامي مختار
+              </p>
+            </div>
+            {settingsSuccessMsg && (
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                {settingsSuccessMsg}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-200">
+              <label className="block text-slate-700 font-bold mb-1">
+                سعر النقطة عند الخصم للمريض (ج.م)
+              </label>
+              <input
+                type="number"
+                step="0.05"
+                min="0.05"
+                value={loyaltySettings.pointValueEGP}
+                onChange={e => setLoyaltySettings({ ...loyaltySettings, pointValueEGP: parseFloat(e.target.value) || 0.5 })}
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-amber-900 text-sm"
+              />
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                مثال: 0.5 ج.م تعني كل 100 نقطة = 50 ج.م خصم
+              </span>
+            </div>
+
+            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-200">
+              <label className="block text-slate-700 font-bold mb-1">
+                معدل اكتساب النقاط مع الفحوصات
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={loyaltySettings.pointsPerEGPSpent}
+                onChange={e => setLoyaltySettings({ ...loyaltySettings, pointsPerEGPSpent: parseFloat(e.target.value) || 0.1 })}
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-blue-900 text-sm"
+              />
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                مثال: 0.1 تعني نقطة واحدة لكل 10 جنيه مدفوعة
+              </span>
+            </div>
+
+            <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
+              <label className="block text-slate-700 font-bold mb-1">
+                رصيد ترحيبي عند فتح ملف جديد
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={loyaltySettings.welcomeBonusPoints}
+                onChange={e => setLoyaltySettings({ ...loyaltySettings, welcomeBonusPoints: parseInt(e.target.value) || 50 })}
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-emerald-900 text-sm"
+              />
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                نقاط تضاف فور تسجيل المريض لأول مرة
+              </span>
+            </div>
+
+            <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-200">
+              <label className="block text-slate-700 font-bold mb-1">
+                الحد الأدنى للنقاط للاستبدال
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={loyaltySettings.minRedeemPoints}
+                onChange={e => setLoyaltySettings({ ...loyaltySettings, minRedeemPoints: parseInt(e.target.value) || 20 })}
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-purple-900 text-sm"
+              />
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                أقل رصيد يسمح بخصمه في الفاتورة
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setShowSettingsPanel(false)}
+              className="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold cursor-pointer"
+            >
+              إغلاق
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+            >
+              حفظ وتطبيق الأسعار على مستوى المعمل
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Program Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -259,11 +415,11 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
                 {/* Action buttons */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => setIsPointsModalOpen(true)}
-                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                    onClick={handleOpenEditModal}
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-2xs"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>إضافة / تعديل نقاط</span>
+                    <span>تعديل النقاط والفئة (إدارة المعمل)</span>
                   </button>
 
                   <button
@@ -355,14 +511,19 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
 
       </div>
 
-      {/* Adjust Points Modal */}
+      {/* Edit Points & Loyalty Card Modal */}
       {isPointsModalOpen && selectedPatient && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 border border-slate-200 shadow-2xl text-xs space-y-4 text-right">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 border border-slate-200 shadow-2xl text-xs space-y-4 text-right">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-sm">
-                تعديل رصيد نقاط المريض: {selectedPatient.name}
-              </h3>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  تعديل كارت وولاء المريض: {selectedPatient.name}
+                </h3>
+                <span className="text-[11px] text-slate-500">
+                  التحكم المباشر في رصيد النقاط وفئة العضوية
+                </span>
+              </div>
               <button 
                 onClick={() => setIsPointsModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
@@ -371,47 +532,115 @@ export const LoyaltyView: React.FC<LoyaltyViewProps> = ({
               </button>
             </div>
 
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">عدد النقاط المراد إضافتها أو خصمها:</label>
-              <input
-                type="number"
-                min={5}
-                value={pointsAdjustment}
-                onChange={e => setPointsAdjustment(parseInt(e.target.value) || 0)}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-sm text-center font-bold"
-              />
+            {/* Direct exact points and tier setting form */}
+            <form onSubmit={handleSaveExactPoints} className="space-y-3 p-3 bg-amber-50/50 rounded-xl border border-amber-200">
+              <span className="font-bold text-amber-950 block text-[11px]">
+                1. تحديد رصيد النقاط وفئة الكارت مباشرة:
+              </span>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رصيد النقاط الفعلي</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={exactPointsValue}
+                    onChange={e => setExactPointsValue(parseInt(e.target.value) || 0)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono font-bold text-emerald-900"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">فئة كارت الولاء</label>
+                  <select
+                    value={editTierValue}
+                    onChange={e => setEditTierValue(e.target.value as any)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-bold cursor-pointer"
+                  >
+                    <option value="Silver">فضي (Silver)</option>
+                    <option value="Gold">ذهبي (Gold)</option>
+                    <option value="Platinum">بلاتينيوم (Platinum)</option>
+                    <option value="VIP">كبار العملاء (VIP)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رقم كارت الولاء</label>
+                <input
+                  type="text"
+                  value={editCardNumber}
+                  onChange={e => setEditCardNumber(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono font-bold"
+                  placeholder="RT-1234-GOLD"
+                />
+              </div>
+
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-[10px] text-emerald-800 font-mono font-bold">
+                  القيمة التوفيرية = {(exactPointsValue * (loyaltySettings.pointValueEGP || 0.5))} ج.م
+                </span>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-bold text-xs shadow-xs cursor-pointer"
+                >
+                  حفظ وتثبيت الرصيد
+                </button>
+              </div>
+            </form>
+
+            {/* Quick add/deduct section */}
+            <div className="space-y-2.5 pt-1 border-t border-slate-200">
+              <span className="font-bold text-slate-800 block text-[11px]">
+                2. أو إضافة / خصم عملية نقاط سريعة:
+              </span>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">عدد النقاط:</label>
+                  <input
+                    type="number"
+                    min={5}
+                    value={pointsAdjustment}
+                    onChange={e => setPointsAdjustment(parseInt(e.target.value) || 0)}
+                    className="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono text-center font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">البيان / السبب:</label>
+                  <input
+                    type="text"
+                    value={adjustmentReason}
+                    onChange={e => setAdjustmentReason(e.target.value)}
+                    placeholder="مثال: بونص ترحيبي..."
+                    className="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPoints('add')}
+                  className="py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-xs cursor-pointer flex items-center justify-center gap-1"
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                  <span>إضافة نقاط (+)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPoints('deduct')}
+                  className="py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-xs cursor-pointer flex items-center justify-center gap-1"
+                >
+                  <ArrowDownLeft className="w-4 h-4" />
+                  <span>خصم نقاط (-)</span>
+                </button>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">سبب المعاملة / البيان:</label>
-              <input
-                type="text"
-                value={adjustmentReason}
-                onChange={e => setAdjustmentReason(e.target.value)}
-                placeholder="مثال: بونص ترحيبي، استبدال، مكافأة..."
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => handleAdjustPoints('add')}
-                className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-xs cursor-pointer flex items-center justify-center gap-1"
-              >
-                <ArrowUpRight className="w-4 h-4" />
-                <span>إضافة نقاط (+)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAdjustPoints('deduct')}
-                className="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-xs cursor-pointer flex items-center justify-center gap-1"
-              >
-                <ArrowDownLeft className="w-4 h-4" />
-                <span>خصم نقاط (-)</span>
-              </button>
-            </div>
           </div>
         </div>
       )}

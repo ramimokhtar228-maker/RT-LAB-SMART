@@ -356,6 +356,35 @@ export const LabProfileView: React.FC = () => {
         </div>
       </div>
 
+      {/* System Maintenance & Factory Reset */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-rose-700" />
+              <span>إدارة النظام وإعادة ضبط المصنع (Factory Reset & Maintenance)</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              إعادة تهيئة النظام والبيانات إلى الوضع المصنعي الافتراضي إذا أردت مسح البيانات التجريبية والبدء من جديد
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('هل أنت متأكد تماماً من رغبتك في إعادة ضبط المصنع؟\nسيتم استرجاع كافة الفحوصات والطلبات والمرضى الافتراضية الأولية.')) {
+                StorageService.resetToDemo();
+                alert('تمت إعادة ضبط المصنع بنجاح!');
+                window.location.reload();
+              }
+            }}
+            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+          >
+            إعادة تعيين البيانات للوضع الافتراضي (Factory Reset)
+          </button>
+        </div>
+      </div>
+
       {/* Add Branch Modal */}
       {isAddBranchModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">

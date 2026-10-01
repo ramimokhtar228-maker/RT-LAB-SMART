@@ -358,21 +358,70 @@ export const TestCatalogView: React.FC<TestCatalogViewProps> = ({
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">الحد الأدنى الطبيعي (Min)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={editingTest.referenceRanges?.[0]?.min ?? 0}
+                  onChange={e => {
+                    const minVal = parseFloat(e.target.value) || 0;
+                    const ranges = [...(editingTest.referenceRanges || [])];
+                    const maxVal = ranges[0]?.max ?? 100;
+                    if (ranges.length === 0) {
+                      ranges.push({ gender: 'All', min: minVal, max: maxVal, textualRange: `${minVal} - ${maxVal} ${editingTest.unit || ''}` });
+                    } else {
+                      ranges[0] = { ...ranges[0], min: minVal, textualRange: `${minVal} - ${maxVal} ${editingTest.unit || ''}` };
+                    }
+                    setEditingTest({ ...editingTest, referenceRanges: ranges });
+                  }}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">الحد الأقصى الطبيعي (Max)</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={editingTest.referenceRanges?.[0]?.max ?? 100}
+                  onChange={e => {
+                    const maxVal = parseFloat(e.target.value) || 0;
+                    const ranges = [...(editingTest.referenceRanges || [])];
+                    const minVal = ranges[0]?.min ?? 0;
+                    if (ranges.length === 0) {
+                      ranges.push({ gender: 'All', min: minVal, max: maxVal, textualRange: `${minVal} - ${maxVal} ${editingTest.unit || ''}` });
+                    } else {
+                      ranges[0] = { ...ranges[0], max: maxVal, textualRange: `${minVal} - ${maxVal} ${editingTest.unit || ''}` };
+                    }
+                    setEditingTest({ ...editingTest, referenceRanges: ranges });
+                  }}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-slate-700 font-bold mb-1">نص المعدل الطبيعي (Reference Range Text)</label>
+              <label className="block text-slate-700 font-bold mb-1">نص المعدل المرجعي بالتقرير (Reference Range Text)</label>
               <input
                 type="text"
                 value={editingTest.referenceRanges?.[0]?.textualRange || ''}
                 onChange={e => {
+                  const txt = e.target.value;
                   const ranges = [...(editingTest.referenceRanges || [])];
+                  const rangeMatch = txt.match(/([0-9.]+)\s*[-–]\s*([0-9.]+)/);
+                  const minParsed = rangeMatch ? parseFloat(rangeMatch[1]) : (ranges[0]?.min ?? 0);
+                  const maxParsed = rangeMatch ? parseFloat(rangeMatch[2]) : (ranges[0]?.max ?? 100);
+
                   if (ranges.length === 0) {
-                    ranges.push({ gender: 'All', min: 0, max: 100, textualRange: e.target.value });
+                    ranges.push({ gender: 'All', min: minParsed, max: maxParsed, textualRange: txt });
                   } else {
-                    ranges[0].textualRange = e.target.value;
+                    ranges[0] = { ...ranges[0], min: minParsed, max: maxParsed, textualRange: txt };
                   }
                   setEditingTest({ ...editingTest, referenceRanges: ranges });
                 }}
-                placeholder="e.g. 70.0 - 99.0 mg/dL"
+                placeholder="مثال: 70.0 - 99.0 mg/dL"
                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono"
               />
             </div>

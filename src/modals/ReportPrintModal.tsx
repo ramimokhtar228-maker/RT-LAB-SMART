@@ -287,7 +287,7 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
         )}
 
         {/* Printable Official Medical Report Document (Each profile in separate A4 page) */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-100 print-container font-sans space-y-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 bg-slate-100 print-container font-sans space-y-6 print:space-y-0">
           
           {profileKeys.map((profileName, profileIndex) => {
             const profileTests = profileGroups[profileName];

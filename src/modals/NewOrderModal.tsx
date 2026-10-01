@@ -10,6 +10,7 @@ import {
 } from '../types/lis';
 import { StorageService } from '../services/storage';
 import { RT_LAB_INFO } from '../data/labInfo';
+import { TUBES_DATA } from '../data/initialData';
 import { expandCompositeTest } from '../data/compositeTestProfiles';
 import { 
   PlusCircle, 
@@ -26,7 +27,14 @@ import {
   Stethoscope,
   Building,
   Award,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  Filter,
+  Plus,
+  FileSpreadsheet,
+  CheckSquare,
+  Square,
+  Tag
 } from 'lucide-react';
 
 interface NewOrderModalProps {
@@ -47,7 +55,7 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   if (!isOpen) return null;
 
   const allPatients = StorageService.getPatients();
-  const allTests = StorageService.getTests();
+  const [allTests, setAllTests] = useState<TestCatalogItem[]>(() => StorageService.getTests());
   const allPackages = StorageService.getPackages();
 
   // Mode: existing patient search vs new patient entry
@@ -71,16 +79,26 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
     preselectedPackageId ? [preselectedPackageId] : []
   );
 
+  // Tests Catalog search and filters inside booking
+  const [testSearch, setTestSearch] = useState('');
+  const [testCategoryFilter, setTestCategoryFilter] = useState('All');
+
+  // Custom Unlisted Test creation state
+  const [showAddCustomTest, setShowAddCustomTest] = useState(false);
+  const [customTestName, setCustomTestName] = useState('');
+  const [customTestCode, setCustomTestCode] = useState('');
+  const [customTestPrice, setCustomTestPrice] = useState<number>(150);
+  const [customTestCategory, setCustomTestCategory] = useState<'Biochemistry' | 'Hematology' | 'Hormones' | 'Immunology' | 'Coagulation' | 'Urine & Stool'>('Biochemistry');
+  const [customTestTubeId, setCustomTestTubeId] = useState('tube-serum-gel');
+  const [customTestUnit, setCustomTestUnit] = useState('mg/dL');
+  const [customTestRange, setCustomTestRange] = useState('');
+
   // Urgency & Financials
   const [urgency, setUrgency] = useState<Urgency>('Routine');
   const [discount, setDiscount] = useState<number>(0);
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [loyaltyRedeemedPoints, setLoyaltyRedeemedPoints] = useState<number>(0);
-
-  // Available points for selected patient
-  const patientPoints = selectedPatient?.loyaltyPoints || 0;
-  const loyaltyDiscountValue = Math.min(grossTotal, loyaltyRedeemedPoints * 0.5); // 1 point = 0.5 EGP
 
   // Handle preselected package if passed
   React.useEffect(() => {
@@ -112,8 +130,42 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
     }
   };
 
-  // Calculate gross total
-  // If packages are selected, calculate discounted package price plus any extra standalone tests
+  // Add custom unlisted test
+  const handleCreateCustomTest = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customTestName.trim()) {
+      alert('يرجى كتابة اسم التحليل.');
+      return;
+    }
+    const generatedCode = customTestCode.trim().toUpperCase() || ('CUST_' + Date.now().toString().slice(-4));
+    const newTest: TestCatalogItem = {
+      id: 'test-cust-' + Date.now(),
+      code: generatedCode,
+      name: customTestName.trim(),
+      arabicName: customTestName.trim(),
+      category: customTestCategory,
+      price: customTestPrice || 100,
+      specimenType: customTestTubeId === 'tube-edta' ? 'Whole Blood EDTA' : customTestTubeId === 'tube-citrate' ? 'Citrated Plasma' : 'Serum',
+      tubeId: customTestTubeId,
+      unit: customTestUnit || 'mg/dL',
+      method: 'Manual / Reference Clinical Assay',
+      estimatedHours: 4,
+      referenceRanges: [
+        { gender: 'All', min: 0, max: 100, textualRange: customTestRange || 'Normal physiological range' }
+      ]
+    };
+
+    StorageService.saveTest(newTest);
+    const updatedCatalog = StorageService.getTests();
+    setAllTests(updatedCatalog);
+    setSelectedTestIds(prev => [...prev, newTest.id]);
+    setShowAddCustomTest(false);
+    setCustomTestName('');
+    setCustomTestCode('');
+    setCustomTestPrice(150);
+  };
+
+  // Calculate gross total first (fixed TDZ issue)
   const packageTotal = selectedPackageIds.reduce((sum, pkgId) => {
     const pkg = allPackages.find(p => p.id === pkgId);
     return sum + (pkg?.packagePrice || 0);
@@ -130,6 +182,13 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   }, 0);
 
   const grossTotal = packageTotal + standaloneTotal;
+
+  // Available points and discount value for selected patient
+  const loyaltySettings = StorageService.getLoyaltySettings();
+  const pointValueEGP = loyaltySettings.pointValueEGP || 0.5;
+  const patientPoints = selectedPatient?.loyaltyPoints || 0;
+  const loyaltyDiscountValue = Math.min(grossTotal, loyaltyRedeemedPoints * pointValueEGP);
+
   const totalDiscount = discount + loyaltyDiscountValue;
   const netTotal = Math.max(0, grossTotal - totalDiscount);
   const remaining = Math.max(0, netTotal - paidAmount);
@@ -492,41 +551,327 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
             </div>
           </div>
 
-          {/* Individual Tests Selection */}
-          <div className="space-y-2">
-            <span className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
-              <TestTube2 className="w-4 h-4 text-blue-600" />
-              <span>التحاليل الفردية (Individual Tests Catalog)</span>
-            </span>
+          {/* Tests Catalog Selector and Custom Test Add */}
+          <div className="space-y-3 bg-slate-50/90 border border-slate-200 rounded-xl p-4">
+            
+            {/* Header & Custom Test Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-blue-700" />
+                <div>
+                  <span className="font-bold text-slate-900 text-xs block">
+                    كتالوج التحاليل المتوفرة للاختيار المباشر (Tests Catalog)
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    اختر التحاليل مباشرة من الجدول أو ابحث بالكود والاسم
+                  </span>
+                </div>
+              </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded-lg border border-slate-200">
-              {allTests.map(test => {
-                const isSelected = selectedTestIds.includes(test.id);
-                return (
-                  <label
-                    key={test.id}
-                    className={`flex items-center justify-between p-2 rounded border cursor-pointer transition-colors ${
-                      isSelected 
-                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold' 
-                        : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomTest(!showAddCustomTest)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                    showAddCustomTest
+                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{showAddCustomTest ? 'إغلاق نموذج التحليل المخصص' : 'إضافة تحليل غير موجود بالكتالوج'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Unlisted Test Inline Form */}
+            {showAddCustomTest && (
+              <div className="p-3.5 bg-emerald-50/70 border border-emerald-300 rounded-xl space-y-3 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>تسجيل تحليل جديد غير متوفر بالكتالوج (Add Custom / Unlisted Test)</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-800">
+                    سيتم إدراجه فوراً بالطلب وإضافته للدليل المرجعي للمعمل
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <div className="lg:col-span-2">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">اسم التحليل (عربي أو إنجليزي)</label>
+                    <input
+                      type="text"
+                      placeholder="مثال: Aldosterone, Zinc, Anti-CCP..."
+                      value={customTestName}
+                      onChange={e => setCustomTestName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">كود الفحص (اختياري)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ALDO, ZN"
+                      value={customTestCode}
+                      onChange={e => setCustomTestCode(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg font-mono uppercase"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">السعر بالجنيه (EGP)</label>
+                    <input
+                      type="number"
+                      value={customTestPrice}
+                      onChange={e => setCustomTestPrice(parseFloat(e.target.value) || 0)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg font-mono font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">القسم المخبري</label>
+                    <select
+                      value={customTestCategory}
+                      onChange={e => setCustomTestCategory(e.target.value as any)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg cursor-pointer"
+                    >
+                      <option value="Biochemistry">Biochemistry (كيمياء حيوية)</option>
+                      <option value="Hematology">Hematology (أمراض دم)</option>
+                      <option value="Hormones">Hormones (هرمونات ودلالات)</option>
+                      <option value="Immunology">Immunology (مناعة وأمصال)</option>
+                      <option value="Coagulation">Coagulation (تجلط وسيولة)</option>
+                      <option value="Urine & Stool">Urine & Stool (سوائل ورواسب)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">نوع العينة والأنبوبة</label>
+                    <select
+                      value={customTestTubeId}
+                      onChange={e => setCustomTestTubeId(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg cursor-pointer"
+                    >
+                      {TUBES_DATA.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.arabicName} ({t.capColor})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">وحدة القياس</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ng/dL, pg/mL, mg/L"
+                      value={customTestUnit}
+                      onChange={e => setCustomTestUnit(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">المعدل الطبيعي (اختياري)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 10 - 50 ng/dL"
+                      value={customTestRange}
+                      onChange={e => setCustomTestRange(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1 border-t border-emerald-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomTest(false)}
+                    className="px-3 py-1.5 text-xs bg-white text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 font-medium cursor-pointer"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateCustomTest}
+                    className="px-4 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>إضافة للطلب وللكتالوج فوراً</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Selected Tests Badges Strip */}
+            {selectedTestIds.length > 0 && (
+              <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-bold text-blue-950">
+                  <span className="flex items-center gap-1">
+                    <CheckSquare className="w-3.5 h-3.5 text-blue-700" />
+                    <span>التحاليل المختارة للطلب الحالي ({selectedTestIds.length} فحص)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTestIds([])}
+                    className="text-[10px] text-rose-700 hover:underline cursor-pointer font-medium"
+                  >
+                    إلغاء تحديد الكل
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                  {selectedTestIds.map(tid => {
+                    const testItem = allTests.find(t => t.id === tid);
+                    if (!testItem) return null;
+                    return (
+                      <span
+                        key={tid}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-white text-blue-900 border border-blue-300 rounded-md text-[11px] font-semibold shadow-2xs"
+                      >
+                        <span className="font-mono font-bold">{testItem.code}</span>
+                        <span>·</span>
+                        <span className="truncate max-w-[130px]">{testItem.arabicName}</span>
+                        <span className="font-mono text-emerald-800 text-[10px]">({testItem.price} ج.م)</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTest(tid)}
+                          className="text-slate-400 hover:text-rose-600 rounded-full cursor-pointer ml-0.5"
+                          title="إزالة من الطلب"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Search and Category Filters */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="ابحث بكود التحليل (CBC, ALT, TSH...) أو اسم الفحص بالعربي والإنجليزي..."
+                  value={testSearch}
+                  onChange={e => setTestSearch(e.target.value)}
+                  className="w-full pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 text-[11px]">
+                {[
+                  { id: 'All', label: 'الكل' },
+                  { id: 'Biochemistry', label: 'كيمياء حيوية' },
+                  { id: 'Hematology', label: 'صورة دم CBC' },
+                  { id: 'Hormones', label: 'هرمونات' },
+                  { id: 'Immunology', label: 'مناعة' },
+                  { id: 'Coagulation', label: 'سيولة وتجلط' },
+                  { id: 'Urine & Stool', label: 'بول وبراز' }
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setTestCategoryFilter(cat.id)}
+                    className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                      testCategoryFilter === cat.id
+                        ? 'bg-blue-700 text-white shadow-2xs font-bold'
+                        : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 truncate">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleToggleTest(test.id)}
-                        className="rounded text-blue-600 shrink-0"
-                      />
-                      <span className="truncate">{test.arabicName}</span>
-                    </div>
-                    <span className="font-mono text-[10px] text-slate-500 shrink-0 mr-1">
-                      {test.price} ج.م
-                    </span>
-                  </label>
-                );
-              })}
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Interactive Tests Catalog Table */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+              <div className="max-h-60 overflow-y-auto">
+                <table className="w-full text-xs text-right border-collapse">
+                  <thead className="bg-slate-100 text-slate-600 font-bold sticky top-0 border-b border-slate-200 z-10">
+                    <tr>
+                      <th className="py-2 px-3 w-10 text-center">اختيار</th>
+                      <th className="py-2 px-3">كود التحليل</th>
+                      <th className="py-2 px-3">اسم التحليل (عربي / English)</th>
+                      <th className="py-2 px-3">نوع الأنبوبة والعينة</th>
+                      <th className="py-2 px-3">القسم</th>
+                      <th className="py-2 px-3 text-left">السعر (ج.م)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {allTests
+                      .filter(test => {
+                        const matchesCategory = testCategoryFilter === 'All' || test.category === testCategoryFilter;
+                        const q = testSearch.toLowerCase().trim();
+                        const matchesSearch = !q ||
+                          test.name.toLowerCase().includes(q) ||
+                          test.arabicName.toLowerCase().includes(q) ||
+                          test.code.toLowerCase().includes(q);
+                        return matchesCategory && matchesSearch;
+                      })
+                      .map(test => {
+                        const isSelected = selectedTestIds.includes(test.id);
+                        const tube = TUBES_DATA.find(t => t.id === test.tubeId);
+
+                        return (
+                          <tr
+                            key={test.id}
+                            onClick={() => handleToggleTest(test.id)}
+                            className={`cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-blue-50/90 font-bold text-blue-950'
+                                : 'hover:bg-slate-50 text-slate-800'
+                            }`}
+                          >
+                            <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleTest(test.id)}
+                                className="rounded text-blue-600 cursor-pointer w-4 h-4"
+                              />
+                            </td>
+                            <td className="py-2 px-3 font-mono font-bold text-slate-900">
+                              <span className={`px-1.5 py-0.5 rounded text-[11px] ${
+                                isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-800 border border-slate-200'
+                              }`}>
+                                {test.code}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3">
+                              <div className="font-bold">{test.arabicName}</div>
+                              <div className="text-[10px] text-slate-400 font-sans">{test.name}</div>
+                            </td>
+                            <td className="py-2 px-3">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
+                                  style={{ backgroundColor: tube?.colorHex || '#94a3b8' }}
+                                />
+                                <span className="text-[11px] text-slate-600">
+                                  {tube?.arabicName || test.specimenType}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 text-[11px] text-slate-500">
+                              {test.category}
+                            </td>
+                            <td className="py-2 px-3 font-mono font-bold text-left text-slate-900" dir="ltr">
+                              {test.price} EGP
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
 
           {/* Section 4 & 5: Auto Tube Cap Calculation Display (Required Tubes) */}
