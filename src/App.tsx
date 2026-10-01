@@ -25,6 +25,7 @@ import { WorklistView } from './views/WorklistView';
 import { SmartReportsView } from './views/SmartReportsView';
 import { ReportsView } from './views/ReportsView';
 import { PatientsView } from './views/PatientsView';
+import { LoyaltyView } from './views/LoyaltyView';
 import { TestCatalogView } from './views/TestCatalogView';
 import { PackagesView } from './views/PackagesView';
 import { FinancialView } from './views/FinancialView';
@@ -385,6 +386,14 @@ export default function App() {
               onOpenNewOrderForPatient={handleOpenNewOrderForPatient}
               onOpenPrintReport={setPrintReportOrder}
               onDeletePatient={handleDeletePatient}
+            />
+          )}
+
+          {activeTab === 'loyalty' && (
+            <LoyaltyView
+              patients={patients}
+              orders={orders}
+              onSavePatient={handleSavePatient}
             />
           )}
 

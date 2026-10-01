@@ -3,6 +3,8 @@ import { Order, OrderTestResult, ResultFlag, UserRole, TestCatalogItem } from '.
 import { StorageService } from '../services/storage';
 import { MedicalCalculations } from '../services/medicalCalculations';
 import { RT_LAB_INFO } from '../data/labInfo';
+import { COMPOSITE_PROFILES, expandCompositeTest, getNormalPresetValues } from '../data/compositeTestProfiles';
+import { CompositeResultEntryModal } from '../modals/CompositeResultEntryModal';
 import { 
   FileSpreadsheet, 
   Search, 
@@ -20,7 +22,10 @@ import {
   Calculator,
   Plus,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Layers,
+  Wand2,
+  ListPlus
 } from 'lucide-react';
 
 interface WorklistViewProps {
@@ -62,11 +67,35 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
   // Add test modal inside worklist
   const [isAddTestOpen, setIsAddTestOpen] = useState(false);
   const [selectedTestToAdd, setSelectedTestToAdd] = useState<string>(allCatalogTests[0]?.id || '');
+  const [isCompositeModalOpen, setIsCompositeModalOpen] = useState(false);
 
-  // Keep state synced when selected order changes
+  // Keep state synced when selected order changes & auto expand composite profiles
   useEffect(() => {
     if (selectedOrder) {
-      setWorkingResults(selectedOrder.results || []);
+      let rawResults = selectedOrder.results || [];
+      const needsExpand = rawResults.some(r => {
+        const codeUpper = r.testCode?.toUpperCase().trim() || '';
+        return codeUpper === 'CBC' || codeUpper === 'URINE_ROUTINE' || codeUpper === 'STOOL_ROUTINE' || codeUpper === 'SEMEN_ANALYSIS';
+      });
+
+      if (needsExpand) {
+        let expandedList: OrderTestResult[] = [];
+        for (const r of rawResults) {
+          const codeUpper = r.testCode?.toUpperCase().trim() || '';
+          if (codeUpper === 'CBC' || codeUpper === 'URINE_ROUTINE' || codeUpper === 'STOOL_ROUTINE' || codeUpper === 'SEMEN_ANALYSIS') {
+            const sub = expandCompositeTest(codeUpper);
+            if (sub && sub.length > 0) {
+              expandedList.push(...sub);
+              continue;
+            }
+          }
+          expandedList.push(r);
+        }
+        setWorkingResults(expandedList);
+      } else {
+        setWorkingResults(rawResults);
+      }
+
       setInterpretation(selectedOrder.clinicalInterpretation || '');
       setComment(selectedOrder.clinicalComment || '');
       setRecommendations(selectedOrder.recommendations || '');
@@ -89,6 +118,26 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
       let flag: ResultFlag = item.flag;
       if (testCatalog && valStr.trim() !== '') {
         flag = StorageService.evaluateResultFlag(testCatalog, valStr, selectedOrder.patientGender);
+      } else if (valStr.trim() !== '') {
+        // Direct range evaluation for composite sub-tests
+        const num = parseFloat(valStr);
+        const rangeMatch = item.referenceRangeText?.match(/([0-9.]+)\s*[-–]\s*([0-9.]+)/);
+        if (!isNaN(num) && rangeMatch) {
+          const min = parseFloat(rangeMatch[1]);
+          const max = parseFloat(rangeMatch[2]);
+          if (!isNaN(min) && !isNaN(max)) {
+            if (num < min) flag = 'Low';
+            else if (num > max) flag = 'High';
+            else flag = 'Normal';
+          }
+        } else {
+          const lower = valStr.toLowerCase();
+          if (lower.includes('+') || lower.includes('pos') || lower.includes('turbid') || lower.includes('large') || lower.includes('many')) {
+            flag = 'High';
+          } else if (lower.includes('nil') || lower.includes('neg') || lower.includes('clear') || lower.includes('normal')) {
+            flag = 'Normal';
+          }
+        }
       }
 
       // Delta check if previous value exists
@@ -113,6 +162,49 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
         deltaAlert
       };
     }));
+  };
+
+  // Expand composite tests (CBC, Urine, Stool, Semen) into full sub-fields
+  const handleExpandAllComposites = () => {
+    let expandedList: OrderTestResult[] = [];
+    let count = 0;
+
+    for (const r of workingResults) {
+      const codeUpper = r.testCode.toUpperCase().trim();
+      const isParent = codeUpper === 'CBC' || codeUpper === 'URINE_ROUTINE' || codeUpper === 'STOOL_ROUTINE' || codeUpper === 'SEMEN_ANALYSIS';
+      
+      if (isParent) {
+        const expanded = expandCompositeTest(codeUpper);
+        if (expanded && expanded.length > 0) {
+          expandedList.push(...expanded);
+          count++;
+          continue;
+        }
+      }
+      expandedList.push(r);
+    }
+
+    setWorkingResults(expandedList);
+    setSaveSuccessMsg(`تم تفريغ وتفكيك حقول الفحص المجمع بنجاح إلى ${expandedList.length} حقل إدخال تفصيلي!`);
+    setTimeout(() => setSaveSuccessMsg(null), 4000);
+  };
+
+  // Quick fill normal preset values
+  const handleQuickFillNormal = (profileKey: string) => {
+    const normalMap = getNormalPresetValues(profileKey);
+    setWorkingResults(prev => prev.map(r => {
+      const preset = normalMap[r.testId] || normalMap[r.testCode];
+      if (preset !== undefined) {
+        return {
+          ...r,
+          resultValue: preset,
+          flag: 'Normal'
+        };
+      }
+      return r;
+    }));
+    setSaveSuccessMsg(`تم تعبئة القيم والمعدلات الطبيعية المعتمدة لـ ${profileKey} بنجاح!`);
+    setTimeout(() => setSaveSuccessMsg(null), 3500);
   };
 
   // Run Medical Calculations Engine (CBC, Lipid, Ca Ionized, HbA1c, HOMA-IR, Liver, eGFR)
@@ -445,6 +537,15 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
 
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => setIsCompositeModalOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      title="نافذة ذكية متخصصة لتفريغ وإدخال نتائج الفحوصات المجمعة CBC وبول وبراز وسيّال"
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>نافذة تفريغ CBC وبول وبراز الذكية</span>
+                    </button>
+
+                    <button
                       onClick={handleTriggerAutoCalculations}
                       className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                       title="حساب معادلات Lipid و Calcium و HOMA و eAG و CBC تلقائياً"
@@ -498,22 +599,106 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
 
               {/* Tests Results Table */}
               <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-                <div className="p-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                
+                {/* Header row */}
+                <div className="p-3.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-900">
-                      جدول النتائج المخبرية ({workingResults.length} فحص)
+                      جدول النتائج المخبرية ({workingResults.length} حقل فحص)
                     </span>
                     <span className="text-[10px] text-slate-500 font-mono">
                       تتحدث المعادلات التلقائية والأعلام والألوان فورياً
                     </span>
                   </div>
 
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExpandAllComposites}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded text-xs font-bold hover:bg-indigo-100 cursor-pointer"
+                      title="تفكيك CBC وبول وبراز وسائل منوي إلى كافة حقولها التفصيلية"
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>تفريغ الفحوصات المجمعة</span>
+                    </button>
+
+                    <button
+                      onClick={() => setIsAddTestOpen(true)}
+                      className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-bold hover:bg-blue-100 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>إضافة فحص</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Composite Unpack Notification Banner if detected */}
+                {(() => {
+                  const unexpanded = workingResults
+                    .map(r => r.testCode.toUpperCase().trim())
+                    .filter(c => c === 'CBC' || c === 'URINE_ROUTINE' || c === 'STOOL_ROUTINE' || c === 'SEMEN_ANALYSIS');
+                  if (unexpanded.length === 0) return null;
+                  return (
+                    <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-blue-700" />
+                        <div>
+                          <span className="text-xs font-bold text-blue-950 block">
+                            فحوصات مجمعة بانتظار التفريغ: {unexpanded.join(' · ')}
+                          </span>
+                          <span className="text-[10px] text-blue-800">
+                            اضغط لتفكيك الفحص إلى كافة حقوله الفرعية (الهيموجلوبين، الصفائح، كرات الدم، الصديد، الأملاح، المظهر...)
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleExpandAllComposites}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                      >
+                        <ListPlus className="w-4 h-4" />
+                        <span>تفريغ وتجهيز حقول النتيجة الآن</span>
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                {/* Quick Fill Toolbar */}
+                <div className="px-3.5 py-2 bg-slate-50/80 border-b border-slate-200 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                    <Wand2 className="w-3.5 h-3.5 text-amber-600" />
+                    <span>تعبئة سريعة للقيم الطبيعية:</span>
+                  </span>
+
                   <button
-                    onClick={() => setIsAddTestOpen(true)}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-bold hover:bg-blue-100 cursor-pointer"
+                    onClick={() => handleQuickFillNormal('CBC')}
+                    className="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded text-[11px] font-semibold cursor-pointer"
+                    title="تعبئة معدلات صورة دم طبيعية"
                   >
-                    <Plus className="w-3 h-3" />
-                    <span>إضافة فحص</span>
+                    صورة دم CBC طبيعية
+                  </button>
+
+                  <button
+                    onClick={() => handleQuickFillNormal('URINE_ROUTINE')}
+                    className="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded text-[11px] font-semibold cursor-pointer"
+                    title="تعبئة فحص بول طبيعي"
+                  >
+                    بول روتيني طبيعي
+                  </button>
+
+                  <button
+                    onClick={() => handleQuickFillNormal('STOOL_ROUTINE')}
+                    className="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded text-[11px] font-semibold cursor-pointer"
+                    title="تعبئة فحص براز طبيعي"
+                  >
+                    براز روتيني طبيعي
+                  </button>
+
+                  <button
+                    onClick={() => handleQuickFillNormal('SEMEN_ANALYSIS')}
+                    className="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded text-[11px] font-semibold cursor-pointer"
+                    title="تعبئة سائل منوي طبيعي"
+                  >
+                    سائل منوي طبيعي
                   </button>
                 </div>
 
@@ -522,7 +707,7 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
                     <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 font-semibold">
                       <tr>
                         <th className="py-2.5 px-3">اسم التحليل والكود</th>
-                        <th className="py-2.5 px-3 w-44">النتيجة (Result)</th>
+                        <th className="py-2.5 px-3 min-w-[200px]">النتيجة (Result)</th>
                         <th className="py-2.5 px-3">الوحدة</th>
                         <th className="py-2.5 px-3">المعدل الطبيعي</th>
                         <th className="py-2.5 px-3">السابق (Delta)</th>
@@ -535,6 +720,16 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
                         const isCritical = result.flag === 'Critical/Panic';
                         const isHigh = result.flag === 'High';
                         const isLow = result.flag === 'Low';
+
+                        // Lookup predefined options for qualitative sub-tests
+                        let subOptions: string[] | undefined = undefined;
+                        for (const prof of Object.values(COMPOSITE_PROFILES)) {
+                          const found = prof.subTests.find(s => s.testCode.toUpperCase() === result.testCode.toUpperCase() || s.testId.toLowerCase() === result.testId.toLowerCase());
+                          if (found && found.options) {
+                            subOptions = found.options;
+                            break;
+                          }
+                        }
 
                         return (
                           <tr key={result.testId} className={`hover:bg-slate-50/70 transition-colors ${
@@ -554,26 +749,61 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
                               </div>
                             </td>
 
-                            {/* Result Input */}
+                            {/* Result Input + Quick Select Chips */}
                             <td className="py-2.5 px-3">
-                              <input
-                                type="text"
-                                value={result.resultValue}
-                                onChange={(e) => handleResultChange(result.testId, e.target.value)}
-                                placeholder="اكتب النتيجة..."
-                                className={`w-full px-2.5 py-1.5 text-xs font-mono font-bold rounded border transition-colors ${
-                                  isCritical 
-                                    ? 'border-rose-400 bg-rose-50 text-rose-900 focus:border-rose-600'
-                                    : isHigh || isLow
-                                    ? 'border-amber-400 bg-amber-50/50 text-amber-900 focus:border-amber-600'
-                                    : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500'
-                                } focus:outline-hidden`}
-                              />
-                              {result.formulaDescription && (
-                                <div className="text-[9px] text-blue-700 truncate mt-0.5" title={result.formulaDescription}>
-                                  {result.formulaDescription}
-                                </div>
-                              )}
+                              <div className="space-y-1">
+                                <input
+                                  type="text"
+                                  value={result.resultValue}
+                                  onChange={(e) => handleResultChange(result.testId, e.target.value)}
+                                  placeholder="اكتب النتيجة أو اختر..."
+                                  className={`w-full px-2.5 py-1 text-xs font-mono font-bold rounded border transition-colors ${
+                                    isCritical 
+                                      ? 'border-rose-400 bg-rose-50 text-rose-900 focus:border-rose-600'
+                                      : isHigh || isLow
+                                      ? 'border-amber-400 bg-amber-50/50 text-amber-900 focus:border-amber-600'
+                                      : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500'
+                                  } focus:outline-hidden`}
+                                />
+
+                                {/* Sub-test options quick click chips */}
+                                {subOptions && (
+                                  <div className="flex flex-wrap gap-1 max-w-xs">
+                                    {subOptions.slice(0, 4).map(opt => (
+                                      <button
+                                        key={opt}
+                                        type="button"
+                                        onClick={() => handleResultChange(result.testId, opt)}
+                                        className={`text-[9.5px] px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                                          result.resultValue === opt
+                                            ? 'bg-blue-700 text-white font-bold'
+                                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                        }`}
+                                      >
+                                        {opt}
+                                      </button>
+                                    ))}
+                                    {subOptions.length > 4 && (
+                                      <select
+                                        value={subOptions.includes(result.resultValue) ? result.resultValue : ''}
+                                        onChange={e => handleResultChange(result.testId, e.target.value)}
+                                        className="text-[9.5px] bg-slate-100 border border-slate-200 rounded px-1 py-0.5 cursor-pointer text-slate-700"
+                                      >
+                                        <option value="">خيارات أخرى...</option>
+                                        {subOptions.map(opt => (
+                                          <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                )}
+
+                                {result.formulaDescription && (
+                                  <div className="text-[9px] text-blue-700 truncate mt-0.5" title={result.formulaDescription}>
+                                    {result.formulaDescription}
+                                  </div>
+                                )}
+                              </div>
                             </td>
 
                             {/* Unit */}
@@ -779,6 +1009,21 @@ export const WorklistView: React.FC<WorklistViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Composite Results Entry Modal */}
+      {isCompositeModalOpen && selectedOrder && (
+        <CompositeResultEntryModal
+          order={selectedOrder}
+          isOpen={isCompositeModalOpen}
+          onClose={() => setIsCompositeModalOpen(false)}
+          onSaveOrder={(updated) => {
+            onUpdateOrder(updated);
+            setWorkingResults(updated.results);
+            setIsCompositeModalOpen(false);
+          }}
+          onOpenPrintReport={onOpenPrintReport}
+        />
       )}
 
     </div>

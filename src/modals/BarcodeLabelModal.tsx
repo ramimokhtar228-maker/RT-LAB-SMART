@@ -2,6 +2,7 @@ import React from 'react';
 import { Order } from '../types/lis';
 import { StorageService } from '../services/storage';
 import { TUBES_DATA } from '../data/initialData';
+import { RT_LAB_INFO } from '../data/labInfo';
 import { Printer, X, Barcode as BarcodeIcon } from 'lucide-react';
 
 interface BarcodeLabelModalProps {
@@ -100,11 +101,16 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
 
               <div className="pr-4">
                 <div className="flex items-center justify-between font-sans">
-                  <div className="font-bold text-slate-900 text-xs">
-                    {order.patientName}
+                  <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <img 
+                      src={RT_LAB_INFO.logoUrl} 
+                      alt="Logo" 
+                      className="w-4 h-4 object-contain rounded-xs shrink-0"
+                    />
+                    <span>{order.patientName}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-blue-900">
-                    معامل RT
+                  <span className="text-[10px] font-bold text-red-900 font-mono">
+                    RT LAB
                   </span>
                 </div>
 

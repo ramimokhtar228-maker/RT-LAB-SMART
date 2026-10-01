@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Order, OrderTestResult } from '../types/lis';
 import { RT_LAB_INFO } from '../data/labInfo';
+import { StorageService } from '../services/storage';
 import { 
   Printer, 
   X, 
@@ -44,6 +45,11 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
 
   const profileKeys = Object.keys(profileGroups);
   const totalPages = profileKeys.length;
+
+  // Retrieve patient loyalty card info
+  const patientRecord = StorageService.getPatients().find(p => p.id === order.patientId || p.phone === order.patientPhone);
+  const loyaltyCardStr = patientRecord?.loyaltyCardNumber || `RT-${order.patientPhone?.slice(-4) || '8888'}-GOLD`;
+  const loyaltyPointsVal = patientRecord?.loyaltyPoints ?? 120;
 
   // Multi-page print handler
   const handlePrintAll = () => {
@@ -405,6 +411,13 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                       </div>
 
                       <div>
+                        <span className="text-[9.5px] text-amber-900 block font-bold">كارت الولاء (RT Rewards):</span>
+                        <span className="font-mono font-bold text-amber-950 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[10px]">
+                          {loyaltyCardStr} ({loyaltyPointsVal} نقطة)
+                        </span>
+                      </div>
+
+                      <div>
                         <span className="text-[9.5px] text-slate-500 block">الصفحة:</span>
                         <span className="font-mono font-bold text-blue-900">
                           صفحة {profileIndex + 1} من {totalPages}
@@ -562,19 +575,32 @@ export const ReportPrintModal: React.FC<ReportPrintModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Center: Barcode & Digital Verification */}
-                    <div className="flex flex-col items-center space-y-0.5">
+                    {/* Center: Official Laboratory Stamp & Barcode Verification */}
+                    <div className="flex flex-col items-center space-y-1">
+                      {/* Official Round Stamp of RT LAB */}
+                      <div className="w-16 h-16 rounded-full border-2 border-red-800 p-1 flex flex-col items-center justify-center text-center bg-red-50/30 shadow-2xs rotate-[-2deg]" title="ختم معتمد رسمي">
+                        <img 
+                          src={RT_LAB_INFO.logoUrl} 
+                          alt="RT LAB Stamp" 
+                          className="w-5 h-5 object-contain rounded-full opacity-90"
+                          referrerPolicy="no-referrer"
+                        />
+                        <span className="text-[6.5px] font-extrabold text-red-900 leading-tight">معامل رامي مختار</span>
+                        <span className="text-[5.5px] font-mono text-red-800 font-bold">ترخيص 7482/2019</span>
+                        <span className="text-[5.5px] text-blue-900 font-bold">معتمد إكلينيكياً ISO</span>
+                      </div>
+
                       <div className="bg-white p-1 rounded border border-slate-200 inline-flex flex-col items-center">
-                        <svg height="20" className="w-32">
+                        <svg height="18" className="w-28">
                           {generateBarcodeLines(order.barcode).reduce((acc: any[], bar) => {
                             const prevX = acc.length > 0 ? acc[acc.length - 1].x + acc[acc.length - 1].width : 2;
-                            acc.push({ x: prevX, width: bar.width * 1.3, fill: bar.isSpace ? 'transparent' : '#000000' });
+                            acc.push({ x: prevX, width: bar.width * 1.2, fill: bar.isSpace ? 'transparent' : '#000000' });
                             return acc;
                           }, []).map((b, i) => (
-                            <rect key={i} x={b.x} y="0" width={b.width} height="20" fill={b.fill} />
+                            <rect key={i} x={b.x} y="0" width={b.width} height="18" fill={b.fill} />
                           ))}
                         </svg>
-                        <span className="text-[8.5px] font-mono tracking-widest text-slate-700">
+                        <span className="text-[8px] font-mono tracking-widest text-slate-700">
                           *{order.barcode}*
                         </span>
                       </div>

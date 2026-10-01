@@ -101,7 +101,15 @@ export const RT_LAB_INFO: LabConfiguration = {
   ],
   ceoSharePercentage: 40,
   labSharePercentage: 60,
-  logoUrl: ramyMokhtarLogoUrl,
+  get logoUrl(): string {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const custom = window.localStorage.getItem('rt_ramy_custom_logo_v2');
+        if (custom) return custom;
+      }
+    } catch {}
+    return ramyMokhtarLogoUrl;
+  },
   teamPhotoUrl: teamPhotoUrl,
   receptionPhotoUrl: receptionPhotoUrl,
   primaryColor: '#881337', // Deep crimson dark red

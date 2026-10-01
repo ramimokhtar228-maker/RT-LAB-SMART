@@ -206,9 +206,46 @@ export const LabProfileView: React.FC = () => {
                 referrerPolicy="no-referrer"
               />
             </div>
-            <div className="pt-3">
+            <div className="pt-3 w-full space-y-2">
               <h3 className="font-bold text-white text-sm">الشعار المعتمد - RT LABS</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">قطرة الدم الياقوتية والدوائر الجزيئية المتطورة</p>
+              
+              <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-800">
+                <label className="px-2.5 py-1 bg-red-900 hover:bg-red-800 text-white rounded text-[11px] font-bold cursor-pointer transition-colors shadow-2xs">
+                  <span>رفع لوجو مخصص</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const base64 = ev.target?.result as string;
+                          if (base64) {
+                            localStorage.setItem('rt_ramy_custom_logo_v2', base64);
+                            window.location.reload();
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+
+                {typeof window !== 'undefined' && window.localStorage && localStorage.getItem('rt_ramy_custom_logo_v2') && (
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('rt_ramy_custom_logo_v2');
+                      window.location.reload();
+                    }}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                  >
+                    استعادة الشعار الأصلي
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

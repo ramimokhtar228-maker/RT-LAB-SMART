@@ -1,4 +1,5 @@
 import React from 'react';
+import { RT_LAB_INFO } from '../data/labInfo';
 import { 
   LayoutDashboard, 
   CalendarClock, 
@@ -19,7 +20,8 @@ import {
   Layers, 
   Building,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Award
 } from 'lucide-react';
 
 export type ActiveTab = 
@@ -31,6 +33,7 @@ export type ActiveTab =
   | 'smart-reports'
   | 'reports'
   | 'patients'
+  | 'loyalty'
   | 'catalog'
   | 'packages'
   | 'financial'
@@ -117,9 +120,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         },
         { 
           id: 'patients', 
-          label: '11. Patients ملفات وسجل المرضى', 
+          label: '10. Patients ملفات وسجل المرضى', 
           icon: Users,
           badge: null
+        },
+        { 
+          id: 'loyalty', 
+          label: '11. كروت الولاء ونقاط المكافآت RT', 
+          icon: Award,
+          badge: 'Rewards',
+          badgeColor: 'bg-amber-400 text-slate-950 font-bold'
         },
       ]
     },
@@ -212,13 +222,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 border-l border-slate-800 flex flex-col shrink-0 no-print select-none">
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-        <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-          نظام LIS معامل RT
-        </span>
-        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">
-          v2.4 Ready
-        </span>
+      <div className="p-3.5 border-b border-slate-800 flex items-center gap-3 bg-slate-950/60">
+        <img
+          src={RT_LAB_INFO.logoUrl}
+          alt="RT LAB Logo"
+          className="w-10 h-10 object-contain rounded-xl border border-red-900/60 p-0.5 bg-white shadow-xs shrink-0"
+          referrerPolicy="no-referrer"
+        />
+        <div className="space-y-0.5 overflow-hidden">
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="text-xs font-black text-white truncate">معامل رامي مختار</span>
+            <span className="text-[9px] font-bold text-amber-400 font-mono bg-amber-950/80 px-1 py-0.2 rounded border border-amber-800 shrink-0">RT LAB</span>
+          </div>
+          <div className="text-[9.5px] font-mono text-emerald-400 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+            <span>نظام LIS مباشر v2.5</span>
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-6">

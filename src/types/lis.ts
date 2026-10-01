@@ -16,6 +16,17 @@ export type PaymentMethod = 'Cash' | 'InstaPay' | 'Wallet' | 'Bank Transfer' | '
 
 export type UserRole = 'Technologist' | 'Pathologist' | 'Receptionist' | 'LabManager';
 
+export type LoyaltyTier = 'Silver' | 'Gold' | 'Platinum' | 'VIP';
+
+export interface LoyaltyTransaction {
+  id: string;
+  date: string;
+  points: number; // positive for earned, negative for redeemed
+  type: 'Earn' | 'Redeem' | 'Bonus' | 'Adjustment';
+  description: string;
+  orderNumber?: string;
+}
+
 export interface TubeInfo {
   id: string;
   name: string;
@@ -123,6 +134,9 @@ export interface Order {
   approvedBy?: string;
   approvedAt?: string;
   hasCriticalValue?: boolean;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsRedeemed?: number;
+  loyaltyDiscountAmount?: number;
 }
 
 export interface Patient {
@@ -142,6 +156,10 @@ export interface Patient {
   registeredAt?: string;
   registeredBranch?: string;
   createdAt?: string;
+  loyaltyCardNumber?: string;
+  loyaltyTier?: LoyaltyTier;
+  loyaltyPoints?: number;
+  loyaltyTransactions?: LoyaltyTransaction[];
 }
 
 export interface Booking {

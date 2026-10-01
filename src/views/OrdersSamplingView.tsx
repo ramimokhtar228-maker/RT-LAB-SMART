@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Order, SpecimenStatus, Urgency } from '../types/lis';
+import { CompositeResultEntryModal } from '../modals/CompositeResultEntryModal';
 import { 
   TestTube2, 
   Search, 
@@ -18,7 +19,9 @@ import {
   Edit,
   Trash2,
   X,
-  Save
+  Save,
+  FileSpreadsheet,
+  Layers
 } from 'lucide-react';
 
 interface OrdersSamplingViewProps {
@@ -44,6 +47,8 @@ export const OrdersSamplingView: React.FC<OrdersSamplingViewProps> = ({
   
   // Edit modal
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  // Composite Result Entry Modal
+  const [compositeEntryOrder, setCompositeEntryOrder] = useState<Order | null>(null);
 
   // Mark sample as collected
   const handleMarkCollected = (order: Order) => {
@@ -343,6 +348,16 @@ export const OrdersSamplingView: React.FC<OrdersSamplingViewProps> = ({
                           </button>
                         )}
 
+                        {/* Direct Composite Result Entry Button */}
+                        <button
+                          onClick={() => setCompositeEntryOrder(order)}
+                          title="تفريغ وإدخال نتائج الفحوصات المجمعة (CBC / بول / براز / سائل منوي / كيمياء)"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-700" />
+                          <span>إدخال النتائج</span>
+                        </button>
+
                         {/* Barcode Print */}
                         <button
                           onClick={() => onOpenBarcode(order)}
@@ -491,6 +506,20 @@ export const OrdersSamplingView: React.FC<OrdersSamplingViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Composite Results Entry Modal */}
+      {compositeEntryOrder && (
+        <CompositeResultEntryModal
+          order={compositeEntryOrder}
+          isOpen={!!compositeEntryOrder}
+          onClose={() => setCompositeEntryOrder(null)}
+          onSaveOrder={(updated) => {
+            onUpdateOrder(updated);
+            setCompositeEntryOrder(null);
+          }}
+          onOpenPrintReport={onOpenPrintReport}
+        />
       )}
 
     </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Patient, Order } from '../types/lis';
+import { RT_LAB_INFO } from '../data/labInfo';
 import { 
   Users, 
   Search, 
@@ -18,7 +19,12 @@ import {
   Printer,
   Trash2,
   X,
-  UserPlus
+  UserPlus,
+  Award,
+  Sparkles,
+  CreditCard,
+  Coins,
+  QrCode
 } from 'lucide-react';
 
 interface PatientsViewProps {
@@ -60,7 +66,10 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
       notes: '',
       allergies: [],
       chronicDiseases: [],
-      createdAt: new Date().toISOString().substring(0, 10)
+      createdAt: new Date().toISOString().substring(0, 10),
+      loyaltyCardNumber: 'RT-' + Math.floor(Math.random() * 8999 + 1000) + '-GOLD',
+      loyaltyTier: 'Gold',
+      loyaltyPoints: 50
     });
     setIsEditModalOpen(true);
   };
@@ -184,9 +193,17 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                     <span>
                       {patient.age} سنة · {patient.gender === 'Male' ? 'ذكر' : 'أنثى'}
                     </span>
-                    <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-semibold text-slate-700">
-                      {orderCount} طلبات
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {patient.loyaltyPoints !== undefined && (
+                        <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded text-[9.5px] font-bold flex items-center gap-0.5">
+                          <Award className="w-2.5 h-2.5 text-amber-600" />
+                          <span>{patient.loyaltyPoints} نقطة</span>
+                        </span>
+                      )}
+                      <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-semibold text-slate-700">
+                        {orderCount} طلبات
+                      </span>
+                    </div>
                   </div>
                 </button>
               );
@@ -269,6 +286,44 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                       ملاحظة طبية: {selectedPatient.notes}
                     </div>
                   )}
+                </div>
+
+                {/* RT LAB VIP Loyalty Card & Points Bar */}
+                <div className="mt-4 p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-400/20 to-red-500/10 border border-amber-300 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-bold shadow-xs shrink-0">
+                      <Award className="w-5 h-5 text-slate-950" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">
+                          كارت الولاء المعتمد (RT LAB Rewards Card)
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono ${
+                          selectedPatient.loyaltyTier === 'VIP' ? 'bg-purple-900 text-white' :
+                          selectedPatient.loyaltyTier === 'Platinum' ? 'bg-slate-800 text-white' :
+                          'bg-amber-400 text-slate-950'
+                        }`}>
+                          {selectedPatient.loyaltyTier || 'Gold'} Tier
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-600 font-mono mt-0.5 flex items-center gap-2">
+                        <span>رقم الكارت: <strong className="text-amber-900 font-bold">{selectedPatient.loyaltyCardNumber || `RT-${selectedPatient.phone?.slice(-4) || '8888'}-GOLD`}</strong></span>
+                        <span>·</span>
+                        <span>رصيد النقاط: <strong className="text-emerald-700 font-bold text-sm">{selectedPatient.loyaltyPoints ?? 100}</strong> نقطة ({((selectedPatient.loyaltyPoints ?? 100) * 0.5).toFixed(0)} ج.م رصيد استبدال)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleStartEdit(selectedPatient)}
+                      className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-800 rounded-lg text-xs font-semibold border border-amber-300 shadow-2xs cursor-pointer flex items-center gap-1"
+                    >
+                      <Coins className="w-3.5 h-3.5 text-amber-600" />
+                      <span>تعديل النقاط والكارت</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -445,6 +500,51 @@ export const PatientsView: React.FC<PatientsViewProps> = ({
                   placeholder="شبرا الخيمة - الشارع / المنطقة"
                   className="w-full px-3 py-2 text-xs border rounded-lg"
                 />
+              </div>
+
+              {/* Loyalty Card and Points Fields */}
+              <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 space-y-2">
+                <div className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-amber-600" />
+                  <span>بيانات كارت الولاء ونقاط المكافآت (RT Loyalty Card)</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رقم كارت الولاء</label>
+                    <input
+                      type="text"
+                      value={editingPatient.loyaltyCardNumber || ''}
+                      onChange={(e) => setEditingPatient({ ...editingPatient, loyaltyCardNumber: e.target.value })}
+                      placeholder="RT-1234-GOLD"
+                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold border rounded-lg bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">فئة كارت الولاء</label>
+                    <select
+                      value={editingPatient.loyaltyTier || 'Gold'}
+                      onChange={(e) => setEditingPatient({ ...editingPatient, loyaltyTier: e.target.value as any })}
+                      className="w-full px-2.5 py-1.5 text-xs font-bold border rounded-lg bg-white"
+                    >
+                      <option value="Silver">فضي (Silver)</option>
+                      <option value="Gold">ذهبي (Gold)</option>
+                      <option value="Platinum">بلاتينيوم (Platinum)</option>
+                      <option value="VIP">كبار العملاء (VIP)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">رصيد النقاط</label>
+                    <input
+                      type="number"
+                      value={editingPatient.loyaltyPoints ?? 50}
+                      onChange={(e) => setEditingPatient({ ...editingPatient, loyaltyPoints: parseInt(e.target.value) || 0 })}
+                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold border rounded-lg bg-white text-emerald-800"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>

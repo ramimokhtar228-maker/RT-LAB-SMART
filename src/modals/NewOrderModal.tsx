@@ -10,6 +10,7 @@ import {
 } from '../types/lis';
 import { StorageService } from '../services/storage';
 import { RT_LAB_INFO } from '../data/labInfo';
+import { expandCompositeTest } from '../data/compositeTestProfiles';
 import { 
   PlusCircle, 
   Search, 
@@ -23,7 +24,9 @@ import {
   User,
   Phone,
   Stethoscope,
-  Building
+  Building,
+  Award,
+  Sparkles
 } from 'lucide-react';
 
 interface NewOrderModalProps {
@@ -73,6 +76,11 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   const [discount, setDiscount] = useState<number>(0);
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
+  const [loyaltyRedeemedPoints, setLoyaltyRedeemedPoints] = useState<number>(0);
+
+  // Available points for selected patient
+  const patientPoints = selectedPatient?.loyaltyPoints || 0;
+  const loyaltyDiscountValue = Math.min(grossTotal, loyaltyRedeemedPoints * 0.5); // 1 point = 0.5 EGP
 
   // Handle preselected package if passed
   React.useEffect(() => {
@@ -122,7 +130,8 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
   }, 0);
 
   const grossTotal = packageTotal + standaloneTotal;
-  const netTotal = Math.max(0, grossTotal - discount);
+  const totalDiscount = discount + loyaltyDiscountValue;
+  const netTotal = Math.max(0, grossTotal - totalDiscount);
   const remaining = Math.max(0, netTotal - paidAmount);
 
   // Tube requirement calculation
@@ -152,7 +161,10 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
         gender,
         nationalId,
         referringDoctor,
-        registeredAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        registeredAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        loyaltyCardNumber: 'RT-' + (phone.slice(-4) || '7777') + '-GOLD',
+        loyaltyTier: 'Gold',
+        loyaltyPoints: 50 // Welcome bonus
       };
       StorageService.savePatient(finalPatient);
     }
@@ -162,20 +174,40 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
     const now = new Date();
     const createdStr = now.toISOString().replace('T', ' ').substring(0, 16);
 
-    // Prepare initial test results
-    const initialResults: OrderTestResult[] = selectedTestIds.map(tid => {
-      const t = allTests.find(x => x.id === tid)!;
-      const ref = t.referenceRanges.find(r => r.gender === finalPatient.gender || r.gender === 'All') || t.referenceRanges[0];
-      return {
-        testId: t.id,
-        testCode: t.code,
-        testName: t.arabicName,
-        resultValue: '',
-        unit: t.unit,
-        referenceRangeText: ref?.textualRange || `${ref?.min} - ${ref?.max}`,
-        flag: 'Normal'
-      };
-    });
+    // Prepare initial test results (expanding composite profiles like CBC, Urine, Stool, Semen!)
+    const initialResults: OrderTestResult[] = [];
+    for (const tid of selectedTestIds) {
+      const t = allTests.find(x => x.id === tid);
+      if (!t) continue;
+
+      const expanded = expandCompositeTest(t.code);
+      if (expanded && expanded.length > 0) {
+        initialResults.push(...expanded);
+      } else {
+        const ref = t.referenceRanges.find(r => r.gender === finalPatient.gender || r.gender === 'All') || t.referenceRanges[0];
+        initialResults.push({
+          testId: t.id,
+          testCode: t.code,
+          testName: t.arabicName,
+          profileCategory: t.profileCategory || 'General Profile',
+          resultValue: '',
+          unit: t.unit,
+          referenceRangeText: ref?.textualRange || `${ref?.min} - ${ref?.max}`,
+          flag: 'Normal'
+        });
+      }
+    }
+
+    // Award Loyalty points (1 point per 10 EGP spent)
+    const pointsEarned = Math.floor(netTotal / 10);
+    const existingPoints = finalPatient.loyaltyPoints || 0;
+    const updatedPatient: Patient = {
+      ...finalPatient,
+      loyaltyPoints: Math.max(0, existingPoints - loyaltyRedeemedPoints + pointsEarned),
+      loyaltyCardNumber: finalPatient.loyaltyCardNumber || `RT-${finalPatient.phone.slice(-4) || '8888'}-GOLD`,
+      loyaltyTier: finalPatient.loyaltyTier || 'Gold'
+    };
+    StorageService.savePatient(updatedPatient);
 
     const newOrder: Order = {
       id: 'ord-' + Date.now(),
@@ -198,12 +230,15 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
       orderStatus: 'Pending',
       reportStatus: 'In Progress',
       totalAmount: grossTotal,
-      discount,
+      discount: totalDiscount,
       netAmount: netTotal,
-      paidAmount: paidAmount > 0 ? paidAmount : netTotal, // default to full pay if desired or user entered
+      paidAmount: paidAmount > 0 ? paidAmount : netTotal,
       remainingAmount: paidAmount > 0 ? Math.max(0, netTotal - paidAmount) : 0,
       paymentMethod,
-      barcode: barcodeStr
+      barcode: barcodeStr,
+      loyaltyPointsEarned: pointsEarned,
+      loyaltyPointsRedeemed: loyaltyRedeemedPoints,
+      loyaltyDiscountAmount: loyaltyDiscountValue
     };
 
     onSaveOrder(newOrder);
@@ -583,6 +618,43 @@ export const NewOrderModal: React.FC<NewOrderModalProps> = ({
                 </select>
               </div>
 
+            </div>
+
+            {/* Section: Loyalty Card & Points Redemption */}
+            <div className="p-3 bg-gradient-to-r from-amber-50 to-yellow-50/60 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-amber-500 text-white rounded-lg shadow-2xs">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-xs">كارت الولاء ونقاط المكافآت RT Rewards</span>
+                    <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300">
+                      {selectedPatient?.loyaltyCardNumber || `RT-${(selectedPatient?.phone || phone || '7777').slice(-4)}-GOLD`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    رصيد نقاط المريض: <strong className="font-mono text-amber-800">{patientPoints} نقطة</strong> (تمنح خصم حتى {(patientPoints * 0.5)} ج.م) · سيكتسب هذا الطلب <strong className="font-mono text-emerald-700">+{Math.floor(netTotal / 10)} نقطة</strong>
+                  </p>
+                </div>
+              </div>
+
+              {patientPoints > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-700 font-semibold">استبدال نقاط:</span>
+                  <select
+                    value={loyaltyRedeemedPoints}
+                    onChange={e => setLoyaltyRedeemedPoints(parseInt(e.target.value) || 0)}
+                    className="p-1.5 bg-white border border-amber-300 rounded-lg font-mono font-bold text-xs text-amber-900 cursor-pointer"
+                  >
+                    <option value={0}>بدون استبدال (0 ج.م)</option>
+                    {patientPoints >= 20 && <option value={20}>استبدال 20 نقطة (-10 ج.م)</option>}
+                    {patientPoints >= 50 && <option value={50}>استبدال 50 نقطة (-25 ج.م)</option>}
+                    {patientPoints >= 100 && <option value={100}>استبدال 100 نقطة (-50 ج.م)</option>}
+                    {patientPoints >= 200 && <option value={200}>استبدال 200 نقطة (-100 ج.م)</option>}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Calculations Breakdown */}

@@ -133,11 +133,33 @@ export const StorageService = {
     if (!safeGet(STORAGE_KEYS.PACKAGES)) {
       setItem(STORAGE_KEYS.PACKAGES, INITIAL_PACKAGES);
     }
-    if (!safeGet(STORAGE_KEYS.PATIENTS)) {
+    const existingPatients = getItem<Patient[]>(STORAGE_KEYS.PATIENTS, []);
+    if (!existingPatients || existingPatients.length === 0) {
       setItem(STORAGE_KEYS.PATIENTS, INITIAL_PATIENTS);
+    } else {
+      const updatedPatients = existingPatients.map(p => {
+        if (!p.loyaltyCardNumber) {
+          const initMatch = INITIAL_PATIENTS.find(ip => ip.id === p.id);
+          return {
+            ...p,
+            loyaltyCardNumber: initMatch?.loyaltyCardNumber || `RT-${p.phone?.slice(-4) || '5555'}-GOLD`,
+            loyaltyTier: initMatch?.loyaltyTier || 'Gold',
+            loyaltyPoints: p.loyaltyPoints ?? (initMatch?.loyaltyPoints || 100)
+          };
+        }
+        return p;
+      });
+      setItem(STORAGE_KEYS.PATIENTS, updatedPatients);
     }
-    if (!safeGet(STORAGE_KEYS.ORDERS)) {
+    const existingOrders = getItem<Order[]>(STORAGE_KEYS.ORDERS, []);
+    if (!existingOrders || existingOrders.length === 0) {
       setItem(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
+    } else {
+      const existingIds = new Set(existingOrders.map(o => o.id));
+      const missingOrders = INITIAL_ORDERS.filter(o => !existingIds.has(o.id));
+      if (missingOrders.length > 0) {
+        setItem(STORAGE_KEYS.ORDERS, [...existingOrders, ...missingOrders]);
+      }
     }
     if (!safeGet(STORAGE_KEYS.BOOKINGS)) {
       setItem(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
